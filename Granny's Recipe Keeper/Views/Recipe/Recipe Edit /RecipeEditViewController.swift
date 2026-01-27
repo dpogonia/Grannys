@@ -5,34 +5,32 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ ТЕМА 32. ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ. Observer.
+
 import UIKit
 
 // MARK: - RecipeEditViewControllerDelegate
-// Протокол для уведомления о сохранении рецепта
+// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 32: ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ
+// НАБЛЮДАТЕЛЬ через Delegate. Определяет зависимость "один-ко-многим" между объектами, где изменение одного объекта приводит к автоматическому уведомлению и обновлению всех зависимых объектов. RecipeEditViewControllerDelegate уведомляет наблюдателей о сохранении рецепта
+// - Слабая связанность между RecipeEditViewController и его наблюдателями
+// - Множество наблюдателей могут реагировать на событие didSaveRecipe()
+// - Наблюдатели могут быть добавлены или удалены динамически
+
 protocol RecipeEditViewControllerDelegate: AnyObject {
-    func didSaveRecipe() // Рецепт был сохранён
+    func didSaveRecipe()
 }
 
-// MARK: - RecipeEditViewController
-// RecipeEditViewController - это экран для создания или редактирования рецепта
-// Позволяет ввести название, инструкции, добавить фото, ингредиенты, категории и т.д.
-// Если recipe == nil, создаётся новый рецепт; если не nil - редактируется существующий
 class RecipeEditViewController: UIViewController {
     
-    // Делегат для уведомления о сохранении рецепта
     weak var delegate: RecipeEditViewControllerDelegate?
     
-    // Рецепт для редактирования (nil = создаём новый рецепт)
     private var recipe: Recipe?
     
-    // Список ингредиентов рецепта
     private var ingredients: [Ingredient] = []
     
-    // Set выбранных категорий (используем UUID для идентификации)
     private var selectedCategories: Set<UUID> = []
     private var allCategories: [Category] = []
     
-    // Состояние раскрытости секций
     private var isPhotoExpanded = false
     private var isIngredientsExpanded = false
     private var isCategoriesExpanded = false
@@ -55,30 +53,9 @@ class RecipeEditViewController: UIViewController {
         return tableView
     }()
     
-    // ВАЖНО: Теги теперь управляются глобально через TagsManager
-    // Это означает, что если добавил тег в одном рецепте, он появится и в других
-    // TagsManager.shared - это Singleton, который хранит все теги приложения
-    
-    // Выбранные теги для текущего рецепта (отмеченные галочкой)
     private var selectedTags: Set<String> = []
     
-    // ВАЖНО: Это COMPUTED PROPERTY (вычисляемое свойство)
-    // В отличие от обычного свойства, это свойство НЕ хранит значение
-    // Оно ВЫЧИСЛЯЕТ значение каждый раз при обращении
-    
-    // АНАЛОГИЯ: Как калькулятор - не хранит результат, а вычисляет его каждый раз
-    // Обычное свойство: var x = 5 (хранит 5)
-    // Computed property: var x: Int { return 2 + 3 } (вычисляет 5 каждый раз)
-    
-    // Зачем computed property здесь?
-    // availableTags должен всегда быть актуальным - если удалили тег, он должен исчезнуть
-    // Если бы это было обычное свойство, нужно было бы обновлять его вручную каждый раз
     private var availableTags: [String] {
-        // Получаем все доступные теги из глобального менеджера
-        // TagsManager.shared.getAllAvailableTags() возвращает:
-        // - Стандартные теги (Vegetarian, Vegan и т.д.)
-        // - Пользовательские теги (добавленные пользователем)
-        // - Исключает удалённые теги
         return TagsManager.shared.getAllAvailableTags()
     }
     
@@ -100,7 +77,6 @@ class RecipeEditViewController: UIViewController {
     private var recipeName: String = ""
     private var recipeInstructions: String = ""
     
-    // Sections
     private enum Section: Int, CaseIterable {
         case basicInfo = 0
         case photo = 1
@@ -142,12 +118,10 @@ class RecipeEditViewController: UIViewController {
     override func viewDidLayoutSubviews() {
         super.viewDidLayoutSubviews()
         
-        // Добавляем кнопку Delete как футер таблицы, если редактируем существующий рецепт
         if recipe != nil && tableView.tableFooterView == nil {
             setupDeleteButtonFooter()
         }
         
-        // Обновляем размер футера после layout
         if let footerView = tableView.tableFooterView {
             let width = tableView.bounds.width
             if width > 0 {
@@ -175,30 +149,8 @@ class RecipeEditViewController: UIViewController {
         navigationItem.rightBarButtonItem = saveButton
     }
     
-    // ЗАГРУЗКА КАТЕГОРИЙ
-    // ИСПРАВЛЕНИЕ: Категории теперь правильно сортируются по полю order
-    // Когда пользователь меняет порядок категорий в CategoriesViewController,
-    // поле order обновляется, и здесь категории отображаются в правильном порядке
-    // 
-    // ПРАВИЛЬНЫЙ ПОРЯДОК КАТЕГОРИЙ ПО УМОЛЧАНИЮ:
-    // 1. Breakfast (Завтрак) - order: 0
-    // 2. Lunch (Обед) - order: 1
-    // 3. Dinner (Ужин) - order: 2
-    // 4. Desserts (Десерты) - order: 3 (после Ужина, но перед Супами)
-    // 5. Soups (Супы) - order: 4
-    // 6. Salads (Салаты) - order: 5
-    // 7. Beverages (Напитки) - order: 6
     private func loadCategories() {
-        // getAllCategories() уже возвращает категории, отсортированные по order
-        // Сначала по полю order (порядок, заданный пользователем),
-        // затем по имени (если order одинаковый)
         allCategories = RecipesRepository.shared.getAllCategories()
-        
-        // ВАЖНО: RecipesRepository.shared.getAllCategories() уже сортирует категории:
-        // 1. По полю order (ascending - по возрастанию)
-        // 2. По имени (если order одинаковый)
-        // Это означает, что категории будут отображаться в том порядке,
-        // в котором пользователь их расположил в CategoriesViewController
     }
     
     private func loadRecipeData() {
@@ -224,14 +176,9 @@ class RecipeEditViewController: UIViewController {
             } else {
                 difficultyValue = UISegmentedControl.noSegment
             }
-            // Загружаем выбранные теги из рецепта
             selectedTags = Set(recipe.tags)
             
-            // ВАЖНО: Теперь пользовательские теги хранятся глобально в TagsManager
-            // Не нужно загружать их из рецепта - они уже есть в TagsManager.shared
-            // Если рецепт содержит тег, которого нет в TagsManager, добавляем его
             for tag in recipe.tags {
-                // Если тег не стандартный и не в списке пользовательских, добавляем его
                 if !TagsManager.shared.defaultTags.contains(tag) {
                     TagsManager.shared.addCustomTag(tag)
                 }
@@ -248,8 +195,6 @@ class RecipeEditViewController: UIViewController {
             tableView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             tableView.bottomAnchor.constraint(equalTo: view.bottomAnchor)
         ])
-        
-        // Футер будет добавлен в viewDidLayoutSubviews когда размеры будут известны
     }
     
     private func setupDeleteButtonFooter() {
@@ -267,13 +212,11 @@ class RecipeEditViewController: UIViewController {
             deleteButton.bottomAnchor.constraint(equalTo: footerView.bottomAnchor, constant: -16)
         ])
         
-        // Устанавливаем начальный размер футера с правильной шириной
         footerView.frame = CGRect(x: 0, y: 0, width: tableView.bounds.width > 0 ? tableView.bounds.width : view.bounds.width, height: 82)
         tableView.tableFooterView = footerView
     }
     
     @objc private func didTapSave() {
-        // Обновляем значения из видимых ячеек перед сохранением
         if let nameCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.basicInfo.rawValue)) as? RecipeEditNameCell {
             recipeName = nameCell.textField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         }
@@ -340,7 +283,12 @@ class RecipeEditViewController: UIViewController {
         }
         
         RecipesRepository.shared.saveRecipe(recipeToSave)
+        
+        // ДЗ ТЕМА 32. ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ.
+        // ПАТТЕРН OBSERVER: Уведомление наблюдателей о сохранении рецепта
+        // Все объекты, подписанные на RecipeEditViewControllerDelegate, будут уведомлены
         delegate?.didSaveRecipe()
+        
         navigationController?.popViewController(animated: true)
     }
     
@@ -399,7 +347,6 @@ class RecipeEditViewController: UIViewController {
         
         if let popover = alert.popoverPresentationController {
             if let sourceView = sourceView {
-                // Преобразуем координаты imageView в координаты view контроллера
                 let rectInView = sourceView.convert(sourceView.bounds, to: view)
                 popover.sourceView = view
                 popover.sourceRect = rectInView
@@ -419,7 +366,6 @@ class RecipeEditViewController: UIViewController {
     }
     
     private func presentUnsplashSearch() {
-        // Обновляем recipeName из ячейки если она видима
         if let nameCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.basicInfo.rawValue)) as? RecipeEditNameCell {
             recipeName = nameCell.textField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         }
@@ -429,17 +375,13 @@ class RecipeEditViewController: UIViewController {
         navigationController?.pushViewController(searchVC, animated: true)
     }
     
-    // ДОБАВЛЕНИЕ НОВОГО ИНГРЕДИЕНТА
-    // Когда пользователь нажимает "+ Add Ingredient", открывается диалог для ввода названия и количества
     @objc private func didTapAddIngredientButton() {
         let alert = UIAlertController(title: "New Ingredient", message: nil, preferredStyle: .alert)
         
-        // Добавляем текстовое поле для названия ингредиента
         alert.addTextField { textField in
             textField.placeholder = "Ingredient name"
         }
         
-        // Добавляем текстовое поле для количества (опционально)
         alert.addTextField { textField in
             textField.placeholder = "Amount (optional)"
         }
@@ -452,39 +394,27 @@ class RecipeEditViewController: UIViewController {
                 return
             }
             
-            // Получаем количество (может быть пустым)
             let amount = alert.textFields?[1].text?.trimmingCharacters(in: .whitespaces)
-            // Создаём новый ингредиент
             let ingredient = Ingredient(name: name, amount: amount?.isEmpty == false ? amount : nil)
-            // Добавляем в массив ингредиентов
             self?.ingredients.append(ingredient)
-            // Перезагружаем секцию ингредиентов
             self?.tableView.reloadSections([Section.ingredients.rawValue], with: .automatic)
         })
         
         present(alert, animated: true)
     }
     
-    // РЕДАКТИРОВАНИЕ ИНГРЕДИЕНТА
-    // ИСПРАВЛЕНИЕ: Добавлена возможность редактирования ингредиентов
-    // Позволяет изменить название и количество существующего ингредиента
     private func editIngredient(at index: Int) {
-        // Проверяем, что индекс валидный
         guard index < ingredients.count else { return }
         
-        // Получаем ингредиент для редактирования
         let ingredient = ingredients[index]
         
-        // Создаём диалог для редактирования
         let alert = UIAlertController(title: "Edit Ingredient", message: nil, preferredStyle: .alert)
         
-        // Добавляем текстовое поле с текущим названием ингредиента
         alert.addTextField { textField in
             textField.placeholder = "Ingredient name"
             textField.text = ingredient.name
         }
         
-        // Добавляем текстовое поле с текущим количеством
         alert.addTextField { textField in
             textField.placeholder = "Amount (optional)"
             textField.text = ingredient.amount
@@ -499,21 +429,16 @@ class RecipeEditViewController: UIViewController {
                 return
             }
             
-            // Получаем новое количество (может быть пустым)
             let amount = alert.textFields?[1].text?.trimmingCharacters(in: .whitespaces)
             
-            // Создаём обновлённый ингредиент с тем же ID
-            // ID остаётся прежним, чтобы сохранить связь с базой данных (если нужно)
             let updatedIngredient = Ingredient(
                 id: ingredient.id,
                 name: name,
                 amount: amount?.isEmpty == false ? amount : nil
             )
             
-            // Заменяем старый ингредиент на обновлённый
             self.ingredients[index] = updatedIngredient
             
-            // Перезагружаем секцию ингредиентов
             self.tableView.reloadSections([Section.ingredients.rawValue], with: .automatic)
         })
         
@@ -550,12 +475,9 @@ class RecipeEditViewController: UIViewController {
         present(alert, animated: true)
     }
     
-    // ДОБАВЛЕНИЕ НОВОГО ТЕГА
-    // Когда пользователь нажимает "+ Add Tag", открывается диалог для ввода названия тега
     @objc private func didTapAddTagButton() {
         let alert = UIAlertController(title: "New Tag", message: "Enter tag name", preferredStyle: .alert)
         
-        // Добавляем текстовое поле для ввода названия тега
         alert.addTextField { textField in
             textField.placeholder = "Tag name"
         }
@@ -569,27 +491,18 @@ class RecipeEditViewController: UIViewController {
                 return
             }
             
-            // Проверяем, существует ли уже такой тег (без учёта регистра)
             let tagExists = self.availableTags.contains(where: { $0.lowercased() == name.lowercased() })
             
             if !tagExists {
-                // Добавляем тег в глобальное хранилище (TagsManager)
-                // Теперь тег будет доступен во всех рецептах
                 TagsManager.shared.addCustomTag(name)
             }
             
-            // Добавляем тег в выбранные для текущего рецепта
             self.selectedTags.insert(name)
             
-            // Перезагружаем секцию тегов
             self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
             
-            // ИСПРАВЛЕНИЕ БАГА: Прокручиваем коллекцию к новому тегу, чтобы его было видно
-            // Находим индекс нового тега в списке
             if let newTagIndex = self.availableTags.firstIndex(of: name) {
-                // Находим ячейку с коллекцией тегов
                 if let tagsCell = self.tableView.cellForRow(at: IndexPath(row: 0, section: Section.tags.rawValue)) as? RecipeEditTagsCell {
-                    // Прокручиваем коллекцию к новому тегу
                     let indexPath = IndexPath(item: newTagIndex, section: 0)
                     tagsCell.collectionView.scrollToItem(at: indexPath, at: .centeredVertically, animated: true)
                 }
@@ -618,7 +531,6 @@ class RecipeEditViewController: UIViewController {
     }
 }
 
-// MARK: - UITableViewDataSource
 extension RecipeEditViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
         return Section.allCases.count
@@ -644,7 +556,7 @@ extension RecipeEditViewController: UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, titleForHeaderInSection section: Int) -> String? {
-        return nil // Все заголовки теперь кастомные
+        return nil
     }
     
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
@@ -724,7 +636,7 @@ extension RecipeEditViewController: UITableViewDataSource {
     }
     
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 40 // Все заголовки теперь имеют одинаковую высоту
+        return 40
     }
     
     @objc private func didTapSectionHeader(_ gesture: UITapGestureRecognizer) {
@@ -773,7 +685,6 @@ extension RecipeEditViewController: UITableViewDataSource {
             let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditPhotoCell.identifier, for: indexPath) as! RecipeEditPhotoCell
             cell.configure(hasImage: hasPhoto)
             
-            // Удаляем старые gesture recognizers
             cell.photoImageView.gestureRecognizers?.forEach { cell.photoImageView.removeGestureRecognizer($0) }
             cell.addPhotoImageView.gestureRecognizers?.forEach { cell.addPhotoImageView.removeGestureRecognizer($0) }
             
@@ -790,7 +701,6 @@ extension RecipeEditViewController: UITableViewDataSource {
                 }
             }
             
-            // Добавляем тап на иконку добавления фото или на само фото
             if hasPhoto {
                 let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapPhotoImageView(_:)))
                 cell.photoImageView.addGestureRecognizer(tapGesture)
@@ -808,11 +718,7 @@ extension RecipeEditViewController: UITableViewDataSource {
                 cell.textLabel?.text = ingredient.displayText
                 cell.textLabel?.textColor = .label
                 cell.textLabel?.font = .systemFont(ofSize: 17)
-                // ИСПРАВЛЕНИЕ: Добавлен индикатор редактирования, чтобы было понятно, что ингредиент можно редактировать
-                // .disclosureIndicator показывает стрелку справа, указывающую, что при нажатии откроется экран редактирования
                 cell.accessoryType = .disclosureIndicator
-                // ИСПРАВЛЕНИЕ: Изменён selectionStyle на .default, чтобы ячейка визуально реагировала на нажатие
-                // Это делает очевидным, что ингредиент можно нажать для редактирования
                 cell.selectionStyle = .default
             } else if indexPath.row == ingredients.count {
                 cell.textLabel?.text = "+ Add Ingredient"
@@ -857,14 +763,12 @@ extension RecipeEditViewController: UITableViewDataSource {
                     flowLayout.minimumLineSpacing = 6
                 }
                 
-                // Удаляем старые gesture recognizers перед добавлением нового
                 cell.collectionView.gestureRecognizers?.forEach { gesture in
                     if gesture is UILongPressGestureRecognizer {
                         cell.collectionView.removeGestureRecognizer(gesture)
                     }
                 }
                 
-                // Добавляем долгий тап для удаления тегов
                 let longPressGesture = UILongPressGestureRecognizer(target: self, action: #selector(handleLongPressOnTag(_:)))
                 longPressGesture.minimumPressDuration = 0.5
                 cell.collectionView.addGestureRecognizer(longPressGesture)
@@ -884,7 +788,6 @@ extension RecipeEditViewController: UITableViewDataSource {
     }
 }
 
-// MARK: - UITableViewDelegate
 extension RecipeEditViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
         tableView.deselectRow(at: indexPath, animated: true)
@@ -894,8 +797,6 @@ extension RecipeEditViewController: UITableViewDelegate {
         switch sectionType {
         case .ingredients:
             if indexPath.row < ingredients.count {
-                // ИСПРАВЛЕНИЕ: Добавлена возможность редактирования ингредиента
-                // При нажатии на ингредиент открывается диалог для редактирования
                 editIngredient(at: indexPath.row)
             } else if indexPath.row == ingredients.count {
                 didTapAddIngredientButton()
@@ -941,7 +842,6 @@ extension RecipeEditViewController: UITableViewDelegate {
     }
 }
 
-// MARK: - UIImagePickerControllerDelegate
 extension RecipeEditViewController: UIImagePickerControllerDelegate, UINavigationControllerDelegate {
     func imagePickerController(_ picker: UIImagePickerController, didFinishPickingMediaWithInfo info: [UIImagePickerController.InfoKey : Any]) {
         let editedImage = info[.editedImage] as? UIImage
@@ -962,7 +862,6 @@ extension RecipeEditViewController: UIImagePickerControllerDelegate, UINavigatio
     }
 }
 
-// MARK: - UITextViewDelegate
 extension RecipeEditViewController: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
         recipeInstructions = textView.text
@@ -977,14 +876,12 @@ extension RecipeEditViewController: UITextViewDelegate {
     }
 }
 
-// MARK: - TextField Handler
 extension RecipeEditViewController {
     @objc private func nameTextFieldDidChange(_ textField: UITextField) {
         recipeName = textField.text ?? ""
     }
 }
 
-// MARK: - UnsplashImageSearchViewControllerDelegate
 extension RecipeEditViewController: UnsplashImageSearchViewControllerDelegate {
     func didSelectImage(image: UIImage, imageURL: String) {
         self.imageData = image.jpegData(compressionQuality: 0.8)
@@ -993,7 +890,6 @@ extension RecipeEditViewController: UnsplashImageSearchViewControllerDelegate {
     }
 }
 
-// MARK: - UICollectionViewDataSource, UICollectionViewDelegate
 extension RecipeEditViewController: UICollectionViewDataSource, UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return availableTags.count
@@ -1027,47 +923,33 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
         
         let tag = availableTags[indexPath.item]
         
-        // Проверяем, является ли тег стандартным (стандартные теги нельзя удалить)
         let isDefaultTag = TagsManager.shared.defaultTags.contains(tag)
         
-        // Создаём меню действий (action sheet)
         let alert = UIAlertController(title: "Tag: \(tag)", message: nil, preferredStyle: .actionSheet)
         
-        // ИСПРАВЛЕНИЕ: Добавляем возможность редактирования тега
-        // Можно редактировать только пользовательские теги (не стандартные)
         if !isDefaultTag {
             alert.addAction(UIAlertAction(title: "Edit", style: .default) { [weak self] _ in
                 self?.editTag(tag)
             })
         }
         
-        // Добавляем действие удаления
-        // Стандартные теги можно только скрыть из текущего рецепта, но не удалить глобально
         if isDefaultTag {
-            // Для стандартных тегов - только убрать из текущего рецепта
             alert.addAction(UIAlertAction(title: "Remove from Recipe", style: .destructive) { [weak self] _ in
                 guard let self = self else { return }
-                // Убираем тег только из текущего рецепта
                 self.selectedTags.remove(tag)
                 self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
             })
         } else {
-            // Для пользовательских тегов - удалить глобально
             alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
                 guard let self = self else { return }
-                // ИСПРАВЛЕНИЕ: Удаляем тег глобально через TagsManager
-                // Теперь тег удалится из всех рецептов
                 TagsManager.shared.deleteCustomTag(tag)
-                // Убираем из выбранных тегов текущего рецепта
                 self.selectedTags.remove(tag)
-                // Перезагружаем секцию тегов
                 self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
             })
         }
         
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
-        // Для iPad нужно указать источник для popover
         if let popover = alert.popoverPresentationController {
             let cell = tagsCell.collectionView.cellForItem(at: indexPath)
             popover.sourceView = cell
@@ -1077,13 +959,9 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
         present(alert, animated: true)
     }
     
-    // РЕДАКТИРОВАНИЕ ТЕГА
-    // Позволяет изменить название тега (старое название заменится на новое во всех рецептах)
-    // ИСПРАВЛЕНИЕ: Добавлена возможность редактирования тегов
     private func editTag(_ oldTag: String) {
         let alert = UIAlertController(title: "Edit Tag", message: "Enter new tag name", preferredStyle: .alert)
         
-        // Добавляем текстовое поле с текущим названием тега
         alert.addTextField { textField in
             textField.placeholder = "Tag name"
             textField.text = oldTag
@@ -1099,24 +977,18 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
                 return
             }
             
-            // Проверяем, не существует ли уже тег с таким названием
             let tagExists = self.availableTags.contains(where: { $0.lowercased() == newName.lowercased() && $0 != oldTag })
             
             if !tagExists {
-                // Переименовываем тег глобально через TagsManager
-                // Старое название заменится на новое во всех рецептах
                 TagsManager.shared.renameTag(oldName: oldTag, newName: newName)
                 
-                // Обновляем выбранные теги текущего рецепта
                 if self.selectedTags.contains(oldTag) {
                     self.selectedTags.remove(oldTag)
                     self.selectedTags.insert(newName)
                 }
                 
-                // Перезагружаем секцию тегов
                 self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
             } else {
-                // Показываем ошибку, если тег с таким названием уже существует
                 let errorAlert = UIAlertController(title: "Error", message: "Tag \"\(newName)\" already exists", preferredStyle: .alert)
                 errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
                 self.present(errorAlert, animated: true)
@@ -1127,14 +999,12 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
 extension RecipeEditViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let tag = availableTags[indexPath.item]
         let font = UIFont.systemFont(ofSize: 14)
         let attributes = [NSAttributedString.Key.font: font]
         let size = (tag as NSString).size(withAttributes: attributes)
-        // Добавляем padding: 12 слева + 12 справа = 24, плюс небольшой запас
         let width = size.width + 24 + 10
         return CGSize(width: width, height: 32)
     }
@@ -1148,7 +1018,6 @@ extension RecipeEditViewController: UICollectionViewDelegateFlowLayout {
     }
 }
 
-// MARK: - Difficulty Change Handler
 extension RecipeEditViewController {
     @objc private func difficultyDidChange(_ segmentedControl: UISegmentedControl) {
         difficultyValue = segmentedControl.selectedSegmentIndex

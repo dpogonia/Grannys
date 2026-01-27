@@ -8,37 +8,26 @@
 import UIKit
 
 // MARK: - RecipeEditInstructionsCell
-// RecipeEditInstructionsCell - это ячейка для ввода инструкций по приготовлению
-// Использует UITextView (многострочное поле ввода) вместо UITextField (одна строка)
-// Потому что инструкции могут быть длинными и занимать несколько строк
+
 class RecipeEditInstructionsCell: UITableViewCell {
-    // Идентификатор ячейки для переиспользования
     static let identifier = "RecipeEditInstructionsCell"
     
-    // UITextView - это многострочное поле для ввода текста
-    // В отличие от UITextField, позволяет вводить несколько строк
     let textView: UITextView = {
         let textView = UITextView()
         textView.translatesAutoresizingMaskIntoConstraints = false
         textView.font = .systemFont(ofSize: 17)
-        // isScrollEnabled = false - отключаем прокрутку (ячейка растягивается по содержимому)
         textView.isScrollEnabled = false
-        // textContainerInset - отступы внутри текстового поля
         textView.textContainerInset = UIEdgeInsets(top: 8, left: 0, bottom: 8, right: 0)
-        // lineFragmentPadding - убираем боковые отступы для текста
         textView.textContainer.lineFragmentPadding = 0
         textView.backgroundColor = .clear
         return textView
     }()
     
-    // placeholderLabel - это метка с подсказкой "Cooking instructions"
-    // Показывается, когда текстовое поле пустое
     private let placeholderLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "Cooking instructions"
         label.font = .systemFont(ofSize: 17)
-        // placeholderText - стандартный цвет для подсказок (серый)
         label.textColor = .placeholderText
         return label
     }()

@@ -7,43 +7,18 @@
 
 import UIKit
 
-// MARK: - CategoriesSelectionViewControllerDelegate
-// Протокол для уведомления о добавлении рецепта
-/*
- // 1. Протокол определяет "правила игры"
- protocol CategoriesSelectionViewControllerDelegate {
-     func didAddRecipe() // "Кто подписывается, должен уметь обработать добавление рецепта"
- }
-
- // 2. Экран выбора категорий говорит: "Когда рецепт добавлен, сообщи об этом делегату"
- delegate?.didAddRecipe()
-
- // 3. RecipesViewController говорит: "Я умею обрабатывать это событие!"
- extension RecipesViewController: CategoriesSelectionViewControllerDelegate {
-     func didAddRecipe() {
-         loadRecipes() // "Когда рецепт добавлен, обновлю список"
-     }
- }
- */
 protocol CategoriesSelectionViewControllerDelegate: AnyObject {
-    func didAddRecipe() // Рецепт был добавлен в базу данных
+    func didAddRecipe()
 }
 
-// MARK: - CategoriesSelectionViewController
-// CategoriesSelectionViewController - это экран для выбора категорий при добавлении рецепта
-// Когда пользователь находит рецепт в TheMealDB, он может добавить его к себе, выбрав категории для него (можно выбрать несколько)
 class CategoriesSelectionViewController: UIViewController {
     
-    // Рецепт из API, который нужно сохранить
     var apiRecipe: APIRecipe?
     
-    // Делегат для уведомления о сохранении рецепта
     weak var delegate: CategoriesSelectionViewControllerDelegate?
     
-    // Все доступные категории из базы данных
     private var allCategories: [Category] = []
     
-    // Set выбранных категорий (используем UUID для идентификации)
     private var selectedCategories: Set<UUID> = []
     
     private lazy var tableView: UITableView = {
@@ -81,57 +56,28 @@ class CategoriesSelectionViewController: UIViewController {
             return
         }
         
-        // filter - фильтрует массив, оставляя только те категории, которые выбраны
-        // $0 - это каждый элемент массива allCategories (каждая Category)
-        // selectedCategories.contains($0.id) - проверяет, есть ли ID категории в Set выбранных
-        // Результат: массив только выбранных категорий
         let categories = allCategories.filter { selectedCategories.contains($0.id) }
         
-        // Преобразуем рецепт из API в наш формат Recipe
         let recipe = RecipesAPIService.shared.convertToRecipe(apiRecipe, categories: categories)
         
-        // Загружаем изображение если есть URL
-        // if let imageURL - безопасное извлечение опционала
-        // , !imageURL.isEmpty - дополнительное условие: строка не пустая
-        // Запятая означает И: оба условия должны выполняться
         if let imageURL = apiRecipe.image, !imageURL.isEmpty {
             
-            // loadImage - асинхронная функция (загрузка из интернета может занять время)
-            // Замыкание { result in ... } вызовится, когда изображение загрузится
             RecipesAPIService.shared.loadImage(from: imageURL) { [weak self] result in
-                // ВАЖНО: Загрузка происходит в фоновом потоке, но UI обновлять нужно в главном потоке!
-                // DispatchQueue.main.async - переключаемся на главный поток (UI поток)
-                // Все операции с интерфейсом ДОЛЖНЫ происходить в главном потоке
                 DispatchQueue.main.async {
-                    // finalRecipe - финальная версия рецепта для сохранения
                     var finalRecipe = recipe
                     
-                    // if case - это PATTERN MATCHING (сопоставление с образцом) для enum Result
-                    // Result имеет два варианта: .success(значение) или .failure(ошибка)
-                    // if case .success(let image) = result означает:
-                    // "если result это .success, извлеки значение в константу image"
                     if case .success(let image) = result {
-                        // jpegData - преобразует UIImage в данные (бинарный формат)
-                        // compressionQuality: 0.8 - качество сжатия (0.0-1.0)
-                        // 0.8 - хороший баланс между качеством и размером файла
                         finalRecipe.imageData = image.jpegData(compressionQuality: 0.8)
                     }
-                    // Если был .failure, imageData останется nil (изображение не загрузилось)
                     
-                    // Сохраняем рецепт в базу данных
                     RecipesRepository.shared.saveRecipe(finalRecipe)
                     
-                    // Уведомляем делегата, что рецепт добавлен
                     self?.delegate?.didAddRecipe()
                     
-                    // Возвращаемся к корневому экрану после сохранения
-                    // popToRootViewController - возвращает на самый первый экран в navigation stack
                     self?.navigationController?.popToRootViewController(animated: true)
                 }
             }
         } else {
-            // Если URL нет или пустой, сохраняем рецепт без изображения
-            // TODO: Добавить дефолтное изображение
             RecipesRepository.shared.saveRecipe(recipe)
             delegate?.didAddRecipe()
             navigationController?.popToRootViewController(animated: true)

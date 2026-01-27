@@ -7,21 +7,11 @@
 
 import UIKit
 
-// MARK: - RecipeEditDifficultyCell
-// RecipeEditDifficultyCell - это ячейка для выбора сложности рецепта
-// Использует UISegmentedControl - это переключатель с несколькими сегментами
-// Пользователь может выбрать один из вариантов: Easy, Medium или Hard
 class RecipeEditDifficultyCell: UITableViewCell {
-    // Идентификатор ячейки для переиспользования
     static let identifier = "RecipeEditDifficultyCell"
     
-    // UISegmentedControl - это переключатель с несколькими сегментами
-    // Похож на переключатель в настройках iOS (например, Wi-Fi: Вкл/Выкл)
-    // Здесь три сегмента: Easy, Medium, Hard
     let segmentedControl: UISegmentedControl = {
-        // Массив строк для сегментов
         let items = ["Easy", "Medium", "Hard"]
-        // Создаём переключатель с этими сегментами
         let control = UISegmentedControl(items: items)
         control.translatesAutoresizingMaskIntoConstraints = false
         return control

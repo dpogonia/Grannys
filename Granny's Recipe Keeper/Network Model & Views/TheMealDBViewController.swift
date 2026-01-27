@@ -7,34 +7,15 @@
 
 import UIKit
 
-// MARK: - TheMealDBViewController
-// TheMealDBViewController - это экран для поиска и просмотра рецептов из интернета (TheMealDB)
-// Позволяет искать рецепты по названию, фильтровать по категориям и добавлять их в свою базу данных
-// Использует пагинацию (загрузку по частям) для оптимизации - загружает по 10 рецептов за раз
 class TheMealDBViewController: UIViewController {
     
-    // Массив рецептов из API, которые сейчас отображаются
     private var recipes: [TheMealDBRecipe] = []
-    
-    // Все доступные категории из API (например, "Beef", "Chicken", "Dessert")
     private var categories: [TheMealDBCategory] = []
-    
-    // Выбранная категория для фильтрации (nil = все рецепты)
     private var selectedCategory: String?
-    
-    // Флаг: загружаются ли рецепты сейчас (чтобы не загружать дважды)
     private var isLoading = false
-    
-    // Флаг: загружается ли следующая страница (для пагинации)
     private var isLoadingMore = false
-    
-    // Есть ли ещё рецепты для загрузки
     private var hasMoreRecipes = true
-    
-    // Текущее смещение (offset) для пагинации - сколько рецептов уже загружено
     private var currentOffset = 0
-    
-    // Размер страницы - сколько рецептов загружать за раз
     private let pageSize = 10
     
     private lazy var categoriesCollectionView: UICollectionView = {
@@ -120,13 +101,11 @@ class TheMealDBViewController: UIViewController {
         setupTableView()
         setupConstraints()
         loadCategories()
-        loadCachedRecipes() // Загружаем кэшированные рецепты для офлайн-режима
+        loadCachedRecipes()
         loadRandomRecipes()
     }
     
-    
     private func loadCachedRecipes() {
-        // Загружаем кэшированные рецепты для офлайн-режима
         if let cachedRecipes = TheMealDBCache.shared.getCachedRecipes() {
             recipes = cachedRecipes
             tableView.reloadData()
@@ -193,7 +172,6 @@ class TheMealDBViewController: UIViewController {
             hasMoreRecipes = true
         }
         
-        // Загружаем несколько случайных рецептов
         let group = DispatchGroup()
         var loadedRecipes: [TheMealDBRecipe] = []
         var lastError: NetworkError?
@@ -235,7 +213,6 @@ class TheMealDBViewController: UIViewController {
                     self.recipes = loadedRecipes
                     self.selectedCategory = nil
                     self.updateTitle()
-                    // Кэшируем рецепты для офлайн-режима
                     TheMealDBCache.shared.cacheRecipes(loadedRecipes)
                     self.tableView.reloadData()
                     self.animateCellsAppearance()
@@ -279,7 +256,6 @@ class TheMealDBViewController: UIViewController {
                             let indexPaths = (startIndex..<self.recipes.count).map { IndexPath(row: $0, section: 0) }
                             self.tableView.insertRows(at: indexPaths, with: .fade)
                             
-                            // Проверяем, есть ли еще рецепты
                             if newRecipes.count < self.pageSize {
                                 self.hasMoreRecipes = false
                             }
@@ -288,12 +264,10 @@ class TheMealDBViewController: UIViewController {
                             self.selectedCategory = category
                             self.currentOffset = newRecipes.count
                             self.updateTitle()
-                            // Кэшируем рецепты для офлайн-режима
                             TheMealDBCache.shared.cacheRecipes(newRecipes)
                             self.tableView.reloadData()
                             self.animateCellsAppearance()
                             
-                            // Проверяем, есть ли еще рецепты
                             if newRecipes.count < self.pageSize {
                                 self.hasMoreRecipes = false
                             }
@@ -313,7 +287,7 @@ class TheMealDBViewController: UIViewController {
         guard !isLoading else { return }
         isLoading = true
         activityIndicator.startAnimating()
-        hasMoreRecipes = false // Поиск возвращает все результаты сразу
+        hasMoreRecipes = false
         
         TheMealDBService.shared.searchRecipesByName(query) { [weak self] result in
             DispatchQueue.main.async {
@@ -326,7 +300,6 @@ class TheMealDBViewController: UIViewController {
                     self?.recipes = recipes
                     self?.selectedCategory = nil
                     self?.updateTitle()
-                    // Кэшируем рецепты для офлайн-режима
                     TheMealDBCache.shared.cacheRecipes(recipes)
                     self?.tableView.reloadData()
                     self?.animateCellsAppearance()
@@ -349,7 +322,6 @@ class TheMealDBViewController: UIViewController {
                     self?.categories = categories
                     self?.categoriesCollectionView.reloadData()
                 case .failure:
-                    // Игнорируем ошибку загрузки категорий
                     break
                 }
             }
@@ -373,11 +345,9 @@ class TheMealDBViewController: UIViewController {
     }
     
     private func updateTitle() {
-        // Убираем иконку шара, используем пустой title
         navigationItem.titleView = nil
         navigationItem.title = nil
         
-        // Для accessibility добавляем текст
         if let category = selectedCategory {
             navigationItem.accessibilityLabel = "TheMealDB - \(category)"
         } else {
@@ -397,10 +367,6 @@ class TheMealDBViewController: UIViewController {
     
     private func setupView() {
         view.backgroundColor = .systemBackground
-        
-        // Используем стандартный стиль navigation bar без кастомных настроек
-        // Это даст такой же вид, как в RecipeDetailViewController
-        
         updateTitle()
     }
     
@@ -450,12 +416,10 @@ class TheMealDBViewController: UIViewController {
     }
 }
 
-// MARK: - UITableViewDataSource
-
 extension TheMealDBViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
         if isLoading {
-            return 5 // Показываем 5 skeleton cells во время загрузки
+            return 5
         }
         return recipes.count
     }
@@ -490,8 +454,6 @@ extension TheMealDBViewController: UITableViewDataSource {
     }
 }
 
-// MARK: - UITableViewDelegate
-
 extension TheMealDBViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, heightForRowAt indexPath: IndexPath) -> CGFloat {
         return 96
@@ -506,13 +468,11 @@ extension TheMealDBViewController: UITableViewDelegate {
         let apiRecipe = TheMealDBService.shared.convertToAPIRecipe(mealDBRecipe)
         let recipe = RecipesAPIService.shared.convertToRecipe(apiRecipe)
         
-        // Показываем preview карточку с возможностью добавления через push navigation
         if #available(iOS 13.0, *) {
             let previewVC = RecipePreviewViewController(recipe: recipe, apiRecipe: apiRecipe)
             previewVC.delegate = self
             navigationController?.pushViewController(previewVC, animated: true)
         } else {
-            // Fallback для iOS 12 и ниже - показываем выбор категорий через push
             let categoriesVC = CategoriesSelectionViewController()
             categoriesVC.delegate = self
             categoriesVC.apiRecipe = apiRecipe
@@ -521,7 +481,6 @@ extension TheMealDBViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, willDisplay cell: UITableViewCell, forRowAt indexPath: IndexPath) {
-        // Анимация появления ячейки только при первой загрузке или при добавлении новых
         if indexPath.row < recipes.count && cell.alpha == 1.0 {
             cell.alpha = 0
             cell.transform = CGAffineTransform(translationX: 0, y: 20)
@@ -531,7 +490,6 @@ extension TheMealDBViewController: UITableViewDelegate {
             })
         }
         
-        // Загружаем больше рецептов, когда пользователь прокручивает к концу списка
         let lastRowIndex = tableView.numberOfRows(inSection: 0) - 1
         if indexPath.row == lastRowIndex && hasMoreRecipes && !isLoadingMore && !isLoading {
             if let category = selectedCategory {
@@ -543,11 +501,9 @@ extension TheMealDBViewController: UITableViewDelegate {
     }
 }
 
-// MARK: - UICollectionViewDataSource
-
 extension TheMealDBViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return categories.count + 1 // +1 для "Все рецепты"
+        return categories.count + 1
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -571,8 +527,6 @@ extension TheMealDBViewController: UICollectionViewDataSource {
     }
 }
 
-// MARK: - UICollectionViewDelegate
-
 extension TheMealDBViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         if indexPath.item == 0 {
@@ -589,19 +543,13 @@ extension TheMealDBViewController: UICollectionViewDelegate {
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
-
 extension TheMealDBViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         return CGSize(width: 80, height: 90)
     }
 }
 
-// MARK: - CategoriesSelectionViewControllerDelegate
-
 extension TheMealDBViewController: CategoriesSelectionViewControllerDelegate {
     func didAddRecipe() {
-        // Рецепт добавлен, можно обновить список если нужно
     }
-    
 }

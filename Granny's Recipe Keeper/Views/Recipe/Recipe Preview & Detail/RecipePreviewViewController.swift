@@ -7,28 +7,17 @@
 
 import UIKit
 
-// MARK: - RecipePreviewViewController
-// RecipePreviewViewController - это экран предпросмотра рецепта перед добавлением
-// Используется когда пользователь находит рецепт в интернете (TheMealDB)
-// Показывает название, фото, ингредиенты и инструкции, позволяет добавить в избранное
-// и сохранить рецепт в базу данных
-// @available(iOS 13.0, *) - требует iOS 13 или новее
 @available(iOS 13.0, *)
 class RecipePreviewViewController: UIViewController {
     
-    // Рецепт для отображения
     private let recipe: Recipe
     
-    // Рецепт из API (если есть) - нужен для сохранения
     private let apiRecipe: APIRecipe?
     
-    // Делегат для уведомления о добавлении рецепта
     weak var delegate: CategoriesSelectionViewControllerDelegate?
     
-    // Сохранённый рецепт из базы данных (если уже был сохранён ранее)
     private var savedRecipe: Recipe?
     
-    // Помечен ли рецепт как избранный
     private var isFavorite: Bool = false
     
     private let scrollView: UIScrollView = {
@@ -142,7 +131,6 @@ class RecipePreviewViewController: UIViewController {
     }
     
     private func checkIfRecipeExists() {
-        // Проверяем, есть ли рецепт с таким именем в базе данных
         let allRecipes = RecipesRepository.shared.getAllRecipes()
         if let existingRecipe = allRecipes.first(where: { $0.name == recipe.name }) {
             savedRecipe = existingRecipe
@@ -153,7 +141,6 @@ class RecipePreviewViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Убеждаемся, что все view имеют белый фон
         view.backgroundColor = .systemBackground
         scrollView.backgroundColor = .systemBackground
         contentView.backgroundColor = .systemBackground
@@ -167,7 +154,6 @@ class RecipePreviewViewController: UIViewController {
     private func setupView() {
         view.backgroundColor = .systemBackground
         
-        // Скрываем кнопку, если нет apiRecipe (для обычных рецептов)
         addButton.isHidden = apiRecipe == nil
     }
     
@@ -183,8 +169,6 @@ class RecipePreviewViewController: UIViewController {
     }()
     
     private func setupNavigationBar() {
-        // Если мы в navigation stack, стандартная кнопка "Назад" появится автоматически
-        // Если нет, добавляем кнопку закрытия с иконкой
         if navigationController == nil || navigationController?.viewControllers.count == 1 {
             navigationItem.leftBarButtonItem = UIBarButtonItem(
                 image: UIImage(systemName: "chevron.left"),
@@ -194,14 +178,11 @@ class RecipePreviewViewController: UIViewController {
             )
         }
         
-        // Добавляем кнопку избранного справа вверху
         navigationItem.rightBarButtonItem = favoriteButton
     }
     
     @objc private func didTapFavoriteButton() {
-        // Проверяем, есть ли рецепт в базе данных
         if let saved = savedRecipe {
-            // Рецепт уже сохранен, переключаем избранное
             RecipesRepository.shared.toggleFavorite(saved)
             if let updatedRecipe = RecipesRepository.shared.getRecipe(by: saved.id) {
                 savedRecipe = updatedRecipe
@@ -209,20 +190,15 @@ class RecipePreviewViewController: UIViewController {
                 updateFavoriteButton()
             }
         } else {
-            // Рецепт еще не сохранен - автоматически сохраняем его с isFavorite = true
             isFavorite.toggle()
             
-            // Создаем рецепт для сохранения
             let recipeToSave: Recipe
             
-            // Если есть apiRecipe, используем его данные
             if let apiRecipe = apiRecipe {
                 let allCategories = RecipesRepository.shared.getAllCategories()
-                // Используем первую доступную категорию или создаем рецепт без категорий
                 let defaultCategory = allCategories.first
                 let convertedRecipe = RecipesAPIService.shared.convertToRecipe(apiRecipe, categories: defaultCategory != nil ? [defaultCategory!] : [])
                 
-                // Создаем новый Recipe с isFavorite = true
                 recipeToSave = Recipe(
                     id: convertedRecipe.id,
                     name: convertedRecipe.name,
@@ -241,7 +217,6 @@ class RecipePreviewViewController: UIViewController {
                     tags: convertedRecipe.tags
                 )
             } else {
-                // Создаем новый Recipe с isFavorite = true из существующего recipe
                 recipeToSave = Recipe(
                     id: recipe.id,
                     name: recipe.name,
@@ -261,10 +236,8 @@ class RecipePreviewViewController: UIViewController {
                 )
             }
             
-            // Сохраняем рецепт
             RecipesRepository.shared.saveRecipe(recipeToSave)
             
-            // Обновляем savedRecipe
             if let updatedRecipe = RecipesRepository.shared.getAllRecipes().first(where: { $0.name == recipeToSave.name }) {
                 savedRecipe = updatedRecipe
                 isFavorite = updatedRecipe.isFavorite
@@ -347,7 +320,6 @@ class RecipePreviewViewController: UIViewController {
     @objc private func didTapAddButton() {
         guard let apiRecipe = apiRecipe else { return }
         
-        // Показываем выбор категорий через push navigation
         let categoriesVC = CategoriesSelectionViewController()
         categoriesVC.delegate = delegate
         categoriesVC.apiRecipe = apiRecipe
@@ -381,7 +353,6 @@ class RecipePreviewViewController: UIViewController {
         let ingredientsText = recipe.ingredients.map { $0.displayText }.joined(separator: "\n")
         ingredientsTextView.text = ingredientsText.isEmpty ? "No ingredients" : ingredientsText
         
-        // Add cooking instructions
         if let instructions = apiRecipe?.instructions, !instructions.isEmpty {
             instructionsTextView.text = instructions
         } else if let instructions = recipe.recipeInstructions, !instructions.isEmpty {

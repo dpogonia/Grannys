@@ -7,13 +7,7 @@
 
 import UIKit
 
-// MARK: - CategoryCollectionViewCell
-// CategoryCollectionViewCell - это ячейка коллекции для отображения категории
-// UICollectionViewCell - это базовый класс для ячеек коллекции
-// Показывает иконку категории и её название в виде карточки
-// Используется в экране редактирования рецепта для выбора категорий
 class CategoryCollectionViewCell: UICollectionViewCell {
-    // Статический идентификатор ячейки для переиспользования
     static let cellIdentifier: String = "CategoryCollectionViewCell"
     
     private let iconImageView: UIImageView = {
@@ -72,7 +66,6 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     func configure(with categoryName: String, isSelected: Bool = false) {
         nameLabel.text = categoryName
         
-        // Устанавливаем иконку в зависимости от категории
         let iconName = iconNameForCategory(categoryName)
         iconImageView.image = UIImage(systemName: iconName)
         
@@ -82,22 +75,20 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     private func iconNameForCategory(_ category: String) -> String {
         let lowercased = category.lowercased()
         
-        // SF Symbols
         switch lowercased {
         case "all recipes": return "square.grid.2x2"
-        case "beef", "lamb", "pork", "chicken", "goat": return "frying.pan" // ИСПРАВЛЕНИЕ: Все категории мяса используют символ сковороды
+        case "beef", "lamb", "pork", "chicken", "goat": return "frying.pan"
         case "dessert", "desserts": return "birthday.cake"
         case "seafood": return "fish"
-        case "vegetarian", "vegan": return "leaf" // Листок без fill
-        case "breakfast": return "cup.and.saucer" // Чашка с блюдцем
-        case "side", "sides", "starter", "starters", "pasta": return "circle.grid.3x3" // Значок как у пасты
-        case "miscellaneous": return "cooktop" // плита
+        case "vegetarian", "vegan": return "leaf"
+        case "breakfast": return "cup.and.saucer"
+        case "side", "sides", "starter", "starters", "pasta": return "circle.grid.3x3"
+        case "miscellaneous": return "cooktop"
         case "soup", "soups": return "cup.and.saucer"
         case "salad", "salads": return "leaf.circle"
         case "lunch": return "fork.knife"
         case "dinner": return "moon.fill"
         case "beverages", "beverage": return "cup.and.saucer.fill"
-        //case "main courses", "main course": return "fork.knife" // Было для обратной совместимости с предыдущими версиями
         default: return "square.grid.2x2"
         }
     }

@@ -5,27 +5,17 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ ТЕМА 27. Operation, OperationQueue
+
 import UIKit
 
-// MARK: - UnsplashImageSearchViewControllerDelegate
-// Протокол для уведомления о выборе изображения
 protocol UnsplashImageSearchViewControllerDelegate: AnyObject {
-    // Изображение было выбрано пользователем
-    // image - само изображение (UIImage)
-    // imageURL - ссылка на изображение в интернете
     func didSelectImage(image: UIImage, imageURL: String)
 }
 
-// MARK: - UnsplashImageSearchViewController
-// UnsplashImageSearchViewController - это экран для поиска изображений через Unsplash API
-// Unsplash - это сервис с бесплатными высококачественными фотографиями
-// Позволяет искать изображения по запросу и выбирать одно для рецепта
 class UnsplashImageSearchViewController: UIViewController {
     
-    // Делегат для уведомления о выборе изображения
     weak var delegate: UnsplashImageSearchViewControllerDelegate?
-    
-    // Поисковый запрос (например, "pasta", "cake")
     private let searchQuery: String
     
     private let searchBar: UISearchBar = {
@@ -151,7 +141,6 @@ class UnsplashImageSearchViewController: UIViewController {
                 case .failure(let error):
                     print("Unsplash search error: \(error.localizedDescription)")
                     self?.emptyStateLabel.isHidden = false
-                    
                     let errorMessage: String
                     if let nsError = error as NSError?, nsError.code == 401 {
                         errorMessage = "Unsplash API key required.\nGet a free key at https://unsplash.com/developers\nand add it to RecipesAPIService.swift"
@@ -171,7 +160,6 @@ class UnsplashImageSearchViewController: UIViewController {
     }
 }
 
-// MARK: - UICollectionViewDataSource
 extension UnsplashImageSearchViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
         return photos.count
@@ -185,13 +173,11 @@ extension UnsplashImageSearchViewController: UICollectionViewDataSource {
     }
 }
 
-// MARK: - UICollectionViewDelegate
 extension UnsplashImageSearchViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
         let photo = photos[indexPath.item]
         let imageURL = photo.urls.regular
         
-        // Загружаем изображение
         activityIndicator.startAnimating()
         RecipesAPIService.shared.loadImage(from: imageURL) { [weak self] result in
             DispatchQueue.main.async {
@@ -209,7 +195,6 @@ extension UnsplashImageSearchViewController: UICollectionViewDelegate {
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
 extension UnsplashImageSearchViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         let padding: CGFloat = 8
@@ -219,7 +204,6 @@ extension UnsplashImageSearchViewController: UICollectionViewDelegateFlowLayout 
     }
 }
 
-// MARK: - UISearchBarDelegate
 extension UnsplashImageSearchViewController: UISearchBarDelegate {
     func searchBarSearchButtonClicked(_ searchBar: UISearchBar) {
         searchBar.resignFirstResponder()
@@ -229,7 +213,6 @@ extension UnsplashImageSearchViewController: UISearchBarDelegate {
     }
 }
 
-// MARK: - UnsplashImageCell
 class UnsplashImageCell: UICollectionViewCell {
     private let imageView: UIImageView = {
         let imageView = UIImageView()
@@ -260,24 +243,18 @@ class UnsplashImageCell: UICollectionViewCell {
         ])
     }
     
-    // Текущая операция загрузки изображения для этой ячейки
-    // Нужна для отмены загрузки, если ячейка переиспользуется
     private var currentLoadOperation: Operation?
     
     func configure(with photo: UnsplashPhoto) {
         imageView.image = nil
-        
-        // Отменяем предыдущую загрузку, если она была
         currentLoadOperation?.cancel()
         currentLoadOperation = nil
         
-        // Загружаем миниатюру для быстрого отображения
         let thumbnailURL = photo.urls.small
         
-        // ДОМАШНЕЕ ЗАДАНИЕ: Использование очереди загрузки изображений
-        // КРИТЕРИЙ ОЦЕНКИ: Организована очередь загрузки - 50 баллов
-        // КРИТЕРИЙ ОЦЕНКИ: Очередь сделана в отдельном классе - 20 баллов
-        // Используем ImageLoadQueueManager для загрузки изображения через OperationQueue
+        // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27. Operation, OperationQueue: Использование очереди загрузки изображений
+        // Организована очередь загрузки
+        // Очередь сделана в отдельном классе
         currentLoadOperation = ImageLoadQueueManager.shared.loadImage(urlString: thumbnailURL) { [weak self] result in
             guard let self = self else { return }
             
@@ -292,9 +269,7 @@ class UnsplashImageCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         
-        // ДОМАШНЕЕ ЗАДАНИЕ: Отмена загрузки при переиспользовании ячейки
-        // КРИТЕРИЙ ОЦЕНКИ: Организована очередь загрузки - 50 баллов
-        // Отменяем загрузку старого изображения при переиспользовании ячейки
+        // Отмена загрузки при переиспользовании ячейки
         currentLoadOperation?.cancel()
         currentLoadOperation = nil
         

@@ -7,12 +7,7 @@
 
 import UIKit
 
-// MARK: - FadeTransitionAnimator
-// FadeTransitionAnimator - это аниматор для плавного появления экрана (fade in)
-// UIViewControllerAnimatedTransitioning - это протокол для кастомных анимаций переходов между экранами
-// Этот класс создаёт анимацию, когда новый экран плавно появляется (меняет прозрачность с 0 до 1)
 class FadeTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
-    // Длительность анимации в секундах (0.3 секунды)
     private let duration: TimeInterval = 0.3
     
     func transitionDuration(using transitionContext: UIViewControllerContextTransitioning?) -> TimeInterval {
@@ -40,14 +35,8 @@ class FadeTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     }
 }
 
-// MARK: - SlideTransitionAnimator
-// SlideTransitionAnimator - это аниматор для скользящего перехода между экранами
-// Создаёт анимацию, когда новый экран "выезжает" снизу вверх
-// isPresenting - показывает ли мы новый экран (true) или скрываем (false)
 class SlideTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
-    // Длительность анимации
     private let duration: TimeInterval = 0.35
-    // Флаг: показываем ли мы экран (true) или скрываем (false)
     private let isPresenting: Bool
     
     init(isPresenting: Bool) {
@@ -91,10 +80,6 @@ class SlideTransitionAnimator: NSObject, UIViewControllerAnimatedTransitioning {
     }
 }
 
-// MARK: - TransitionDelegate
-// TransitionDelegate - это делегат для управления анимациями переходов
-// UIViewControllerTransitioningDelegate - протокол для настройки кастомных анимаций
-// Этот класс решает, какую анимацию использовать при показе и скрытии экранов
 class TransitionDelegate: NSObject, UIViewControllerTransitioningDelegate {
     func animationController(forPresented presented: UIViewController, presenting: UIViewController, source: UIViewController) -> UIViewControllerAnimatedTransitioning? {
         return SlideTransitionAnimator(isPresenting: true)

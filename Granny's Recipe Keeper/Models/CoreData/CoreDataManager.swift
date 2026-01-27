@@ -5,48 +5,30 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ. Singleton.
+
 import CoreData
 import UIKit
 
-// MARK: - CoreDataManager
-// CoreDataManager - это менеджер базы данных приложения
-//
-// Core Data как библиотека с картотекой
-// - База данных (SQLite файл) - это хранилище с полками
-// - Модель данных (NSManagedObjectModel) - это схема картотеки (какие карточки и какие поля)
-// - Контекст (NSManagedObjectContext) - это рабочий стол, где ты работаешь с карточками
-// - Сохранение (saveContext) - это когда ты кладёшь карточки обратно на полки
-
+// ДЗ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ
+// ПАТТЕРН 1: SINGLETON
+// Описание: CoreDataManager реализует паттерн Singleton для обеспечения единственного экземпляра менеджера Core Data во всем приложении. Гарантирует единый контекст Core Data, предотвращает конфликты данных.
 class CoreDataManager {
-    // Singleton паттерн - один экземпляр на всё приложение
-    // Все части приложения используют одну и ту же базу данных
+    
+    // ПАТТЕРН SINGLETON: Единственный экземпляр класса, доступный глобально
     static let shared = CoreDataManager()
     
-    // lazy var - это ленивое свойство: создаётся только при первом обращении
-    // Это полезно, потому что создание базы данных - дорогая операция. Мы не хотим создавать её, пока она не понадобится
-    // NSPersistentContainer - это контейнер, который управляет всей базой данных
     lazy var persistentContainer: NSPersistentContainer = {
-        // Создаем модель данных программно (в коде, а не в файле .xcdatamodeld)
-        // Модель - это описание структуры данных: какие таблицы, какие поля
-        // Это как чертёж здания: описывает, как устроена база данных
         let model = NSManagedObjectModel()
         
-        // Recipe Entity (Сущность Рецепт)
-        // Entity - это таблица в базе данных (как таблица в Excel)
-        // Каждая строка таблицы - это один рецепт
         let recipeEntity = NSEntityDescription()
         recipeEntity.name = "RecipeEntity"
-        // managedObjectClassName - имя класса Swift, который представляет эту сущность
         recipeEntity.managedObjectClassName = NSStringFromClass(RecipeEntity.self)
         
-        // Теперь создаём поля (атрибуты) для таблицы RecipeEntity
-        // Каждое поле имеет название, тип и может быть обязательным или нет
-        
-        // Поле "id" - уникальный идентификатор рецепта
         let recipeId = NSAttributeDescription()
         recipeId.name = "id"
-        recipeId.attributeType = .UUIDAttributeType // Тип: UUID (уникальный идентификатор)
-        recipeId.isOptional = false // Обязательное поле (не может быть пустым)
+        recipeId.attributeType = .UUIDAttributeType
+        recipeId.isOptional = false
         
         let recipeName = NSAttributeDescription()
         recipeName.name = "name"
@@ -87,12 +69,12 @@ class CoreDataManager {
         recipeCreatedAt.defaultValue = Date()
         
         let recipeCookingTime = NSAttributeDescription()
-        recipeCookingTime.name = "cookingTime" // будет добавлено в будущем
+        recipeCookingTime.name = "cookingTime"
         recipeCookingTime.attributeType = .integer32AttributeType
         recipeCookingTime.isOptional = true
         
         let recipeServings = NSAttributeDescription()
-        recipeServings.name = "servings" // будет добавлено в будущем
+        recipeServings.name = "servings"
         recipeServings.attributeType = .integer32AttributeType
         recipeServings.isOptional = true
         
@@ -102,7 +84,7 @@ class CoreDataManager {
         recipeDifficulty.isOptional = true
         
         let recipeCalories = NSAttributeDescription()
-        recipeCalories.name = "calories" // будет добавлено в будущем
+        recipeCalories.name = "calories"
         recipeCalories.attributeType = .integer32AttributeType
         recipeCalories.isOptional = true
         
@@ -113,7 +95,6 @@ class CoreDataManager {
         
         recipeEntity.properties = [recipeId, recipeName, recipeInstructions, recipeImageData, recipeImageURL, recipeIsArchived, recipeIsFavorite, recipeCreatedAt, recipeCookingTime, recipeServings, recipeDifficulty, recipeCalories, recipeTags]
         
-        // Category Entity
         let categoryEntity = NSEntityDescription()
         categoryEntity.name = "CategoryEntity"
         categoryEntity.managedObjectClassName = NSStringFromClass(CategoryEntity.self)
@@ -142,7 +123,6 @@ class CoreDataManager {
         
         categoryEntity.properties = [categoryId, categoryName, categoryIsDefault, categoryOrder]
         
-        // Ingredient Entity
         let ingredientEntity = NSEntityDescription()
         ingredientEntity.name = "IngredientEntity"
         ingredientEntity.managedObjectClassName = NSStringFromClass(IngredientEntity.self)
@@ -164,7 +144,6 @@ class CoreDataManager {
         
         ingredientEntity.properties = [ingredientId, ingredientName, ingredientAmount]
         
-        // AppSettings Entity
         let appSettingsEntity = NSEntityDescription()
         appSettingsEntity.name = "AppSettingsEntity"
         appSettingsEntity.managedObjectClassName = NSStringFromClass(AppSettingsEntity.self)
@@ -182,37 +161,20 @@ class CoreDataManager {
         
         appSettingsEntity.properties = [settingsId, isSpecialCategoriesHidden]
         
-        // Relationships (Связи между сущностями)
-        // Связи - это как связи между таблицами в базе данных
-        // АНАЛОГИЯ: Как связи в семье - рецепт "имеет" ингредиенты, ингредиент "принадлежит" рецепту
-        
-        // Связь от Recipe к Ingredient (один ко многим)
-        // Один рецепт может иметь много ингредиентов
         let recipeToIngredients = NSRelationshipDescription()
         recipeToIngredients.name = "ingredients"
-        recipeToIngredients.destinationEntity = ingredientEntity // Куда ведёт связь
-        recipeToIngredients.maxCount = 0 // 0 означает "неограниченное количество" (много)
+        recipeToIngredients.destinationEntity = ingredientEntity
+        recipeToIngredients.maxCount = 0
         
-        // deleteRule - правило удаления: что делать с ингредиентами, когда удаляется рецепт
-        // .cascadeDeleteRule - каскадное удаление: если удаляем рецепт, удаляются и все его ингредиенты
-        // АНАЛОГИЯ: Как удаление папки - удаляются и все файлы внутри
         recipeToIngredients.deleteRule = .cascadeDeleteRule
         
-        // Обратная связь: от Ingredient к Recipe (многие к одному)
-        // Много ингредиентов могут принадлежать одному рецепту
         let ingredientToRecipe = NSRelationshipDescription()
         ingredientToRecipe.name = "recipe"
         ingredientToRecipe.destinationEntity = recipeEntity
-        ingredientToRecipe.maxCount = 1 // Максимум 1 рецепт (один ингредиент принадлежит одному рецепту)
+        ingredientToRecipe.maxCount = 1
         
-        // .nullifyDeleteRule - обнуление связи: если удаляем ингредиент, просто убираем связь с рецептом
-        // Рецепт остаётся, но ингредиент больше не связан с ним
-        // АНАЛОГИЯ: Как удаление сотрудника - компания остаётся, но сотрудника в ней больше нет
         ingredientToRecipe.deleteRule = .nullifyDeleteRule
         
-        // Устанавливаем обратные связи (bidirectional relationship)
-        // Это нужно, чтобы Core Data знал, что это одна и та же связь с двух сторон
-        // АНАЛОГИЯ: Как двусторонняя улица - можно идти в обе стороны
         recipeToIngredients.inverseRelationship = ingredientToRecipe
         ingredientToRecipe.inverseRelationship = recipeToIngredients
         
@@ -238,65 +200,40 @@ class CoreDataManager {
         
         model.entities = [recipeEntity, categoryEntity, ingredientEntity, appSettingsEntity]
         
-        // Создаем контейнер с нашей моделью
-        // NSPersistentContainer - это главный объект, который управляет базой данных
-        // name: "RecipesModel" - имя базы данных (используется для поиска файла)
         let container = NSPersistentContainer(name: "RecipesModel", managedObjectModel: model)
         
-        // Настраиваем, где хранить базу данных
         let storeDescription = NSPersistentStoreDescription()
-        // type - тип хранилища: SQLite (файловая база данных)
         storeDescription.type = NSSQLiteStoreType
         
-        // url - путь к файлу базы данных на диске
-        // .documentDirectory - папка Documents приложения (данные сохраняются между запусками)
-        // appendingPathComponent - добавляем имя файла "RecipesModel.sqlite"
         storeDescription.url = FileManager.default.urls(for: .documentDirectory, in: .userDomainMask).first?.appendingPathComponent("RecipesModel.sqlite")
         
-        // Автоматическая миграция: если структура базы изменилась, Core Data обновит её автоматически
         storeDescription.shouldMigrateStoreAutomatically = true
         storeDescription.shouldInferMappingModelAutomatically = true
         
-        // Применяем настройки к контейнеру
         container.persistentStoreDescriptions = [storeDescription]
         
-        // Загружаем базу данных (открываем файл)
-        // Это асинхронная операция: может занять время, поэтому используется замыкание
         container.loadPersistentStores { description, error in
             if let error = error {
-                // Если не удалось загрузить базу данных, приложение не может работать
-                // fatalError останавливает приложение с сообщением об ошибке
                 fatalError("Core Data store failed to load: \(error.localizedDescription)")
             }
         }
         
-        // Автоматически объединять изменения из родительского контекста
-        // Это нужно для многопоточности: если данные изменились в фоне, они появятся в UI
         container.viewContext.automaticallyMergesChangesFromParent = true
         
         return container
     }()
     
-    // viewContext - это главный контекст для работы с данными в UI потоке
-    // Контекст - это "рабочая область": все изменения делаются в контексте,
-    // а потом сохраняются в базу данных через saveContext()
     var viewContext: NSManagedObjectContext {
         return persistentContainer.viewContext
     }
     
-    // Сохранить все изменения в базу данных
     func saveContext() {
         let context = persistentContainer.viewContext
         
-        // Проверяем, есть ли изменения для сохранения
-        // Если ничего не меняли, сохранять не нужно
         if context.hasChanges {
             do {
-                // try - может выбросить ошибку, поэтому используем do-catch
-                // save() - сохраняет все изменения в базу данных
                 try context.save()
             } catch {
-                // Если сохранение не удалось, выводим ошибку
                 let nsError = error as NSError
                 fatalError("Unresolved error \(nsError), \(nsError.userInfo)")
             }
@@ -304,7 +241,6 @@ class CoreDataManager {
     }
     
     // MARK: - App Settings
-    
     func getAppSettings() -> AppSettingsEntity {
         let context = viewContext
         let fetchRequest: NSFetchRequest<AppSettingsEntity> = AppSettingsEntity.fetchRequest()
@@ -314,7 +250,6 @@ class CoreDataManager {
             return settings
         }
         
-        // Создаем новые настройки, если их нет
         let settings = AppSettingsEntity(context: context)
         settings.id = UUID()
         settings.isSpecialCategoriesHidden = false
@@ -332,7 +267,7 @@ class CoreDataManager {
         return getAppSettings().isSpecialCategoriesHidden
     }
     
-    private init() {}
+    private init() {} // private init() - запрет создания новых экземпляров извне, единственный способ получить экземпляр - через CoreDataManager.shared
 }
 
 // MARK: - NSManagedObject Subclasses

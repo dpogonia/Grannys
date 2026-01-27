@@ -7,14 +7,7 @@
 
 import UIKit
 
-// MARK: - SkeletonLoadingCell
-// SkeletonLoadingCell - это ячейка-заглушка, которая показывается во время загрузки данных
-// "Skeleton" (скелет) - это паттерн UI: показываем серые прямоугольники вместо реального контента
-// Это создаёт ощущение, что данные загружаются, и приложение не "зависло"
-// Используется когда загружаются рецепты из интернета
-// Анимация "shimmer" (мерцание) делает загрузку более заметной
 class SkeletonLoadingCell: UITableViewCell {
-    // Идентификатор ячейки для переиспользования
     static let cellIdentifier: String = "SkeletonLoadingCell"
     
     private let cardContainerView: UIView = {
