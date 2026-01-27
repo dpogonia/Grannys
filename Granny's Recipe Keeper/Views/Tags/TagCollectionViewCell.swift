@@ -7,13 +7,7 @@
 
 import UIKit
 
-// MARK: - TagCollectionViewCell
-// TagCollectionViewCell - это ячейка коллекции для отображения тега
-// Показывает тег в виде "чипа" (маленького прямоугольника с закруглёнными углами)
-// Тег может быть выбранным (синий фон) или невыбранным (серый фон)
-// Используется в RecipeEditTagsCell для отображения списка тегов
 class TagCollectionViewCell: UICollectionViewCell {
-    // Идентификатор ячейки для переиспользования
     static let identifier = "TagCell"
     
     private let tagLabel: UILabel = {

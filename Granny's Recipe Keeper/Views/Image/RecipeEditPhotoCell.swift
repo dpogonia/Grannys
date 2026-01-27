@@ -7,43 +7,28 @@
 
 import UIKit
 
-// MARK: - RecipeEditPhotoCell
-// RecipeEditPhotoCell - это ячейка для отображения и выбора фото рецепта
-// Показывает либо загруженное фото, либо изображение-заглушку для добавления фото
 class RecipeEditPhotoCell: UITableViewCell {
-    // Идентификатор ячейки для переиспользования
     static let identifier = "RecipeEditPhotoCell"
     
-    // photoImageView - показывает загруженное фото рецепта
-    // Скрыт по умолчанию (показывается только когда есть фото)
     let photoImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        // scaleAspectFit - масштабирует изображение, сохраняя пропорции, чтобы оно поместилось
         imageView.contentMode = .scaleAspectFit
-        // clipsToBounds - обрезает изображение по границам view
         imageView.clipsToBounds = true
         imageView.backgroundColor = .clear
-        // cornerRadius - скругляет углы изображения (8 пикселей)
         imageView.layer.cornerRadius = 8
-        // isHidden = true - скрыт по умолчанию
         imageView.isHidden = true
         return imageView
     }()
     
-    // addPhotoImageView - показывает изображение-заглушку для добавления фото
-    // Это изображение видно всегда, когда нет загруженного фото
     let addPhotoImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        // Используем изображение "default" из Assets
         imageView.image = UIImage(named: "default")
-        // scaleAspectFill - заполняет всю область, обрезая при необходимости
         imageView.contentMode = .scaleAspectFill
         imageView.backgroundColor = .secondarySystemBackground
         imageView.layer.cornerRadius = 8
         imageView.clipsToBounds = true
-        // isUserInteractionEnabled = true - позволяет нажимать на изображение
         imageView.isUserInteractionEnabled = true
         return imageView
     }()

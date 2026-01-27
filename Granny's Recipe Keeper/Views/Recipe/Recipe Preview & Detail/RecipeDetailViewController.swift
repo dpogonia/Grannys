@@ -7,27 +7,15 @@
 
 import UIKit
 
-// MARK: - RecipeDetailViewControllerDelegate
-// Протокол (protocol) - это контракт: класс, который его принимает, должен реализовать эти методы
-// Delegate паттерн - это способ сообщить другому объекту о событиях
-// АНАЛОГИЯ: Это как кнопка "Назад" в навигаторе - когда ты приезжаешь, навигатор сообщает об этом
-// Здесь: когда рецепт обновлён или удалён, мы сообщаем RecipesViewController
 protocol RecipeDetailViewControllerDelegate: AnyObject {
-    func didUpdateRecipe() // Рецепт был обновлён
-    func didDeleteRecipe() // Рецепт был удалён
+    func didUpdateRecipe()
+    func didDeleteRecipe()
 }
 
-// MARK: - RecipeDetailViewController
-// RecipeDetailViewController - это экран с детальной информацией о рецепте
-// Показывает название, фото, ингредиенты, инструкции и позволяет редактировать или удалить рецепт
 class RecipeDetailViewController: UIViewController {
     
-    // Рецепт, который отображается на этом экране
     private var recipe: Recipe
     
-    // weak var - слабая ссылка на делегата
-    // weak предотвращает циклы ссылок (memory leaks)
-    // delegate - объект, который будет уведомлён об изменениях рецепта
     weak var delegate: RecipeDetailViewControllerDelegate?
     
     private let scrollView: UIScrollView = {
@@ -99,8 +87,6 @@ class RecipeDetailViewController: UIViewController {
         return textView
     }()
     
-    // ИСПРАВЛЕНИЕ: Добавлены элементы UI для отображения категорий и тегов
-    // Категории и теги теперь отображаются под инструкциями, чтобы пользователь мог их видеть при просмотре рецепта
     private let categoriesLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -110,8 +96,6 @@ class RecipeDetailViewController: UIViewController {
         return label
     }()
     
-    // ИСПРАВЛЕНИЕ: Используем вертикальный stackView для автоматического переноса элементов на новую строку
-    // Вертикальный stackView будет содержать несколько горизонтальных stackView (по одному на строку)
     private let categoriesStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -131,7 +115,6 @@ class RecipeDetailViewController: UIViewController {
         return label
     }()
     
-    // ИСПРАВЛЕНИЕ: Используем вертикальный stackView для автоматического переноса элементов на новую строку
     private let tagsStackView: UIStackView = {
         let stackView = UIStackView()
         stackView.translatesAutoresizingMaskIntoConstraints = false
@@ -220,7 +203,6 @@ class RecipeDetailViewController: UIViewController {
             self?.presentUnsplashSearch()
         })
         
-        // Добавляем опцию удаления фото, если фото есть
         if recipe.imageData != nil || (recipe.imageURL != nil && !recipe.imageURL!.isEmpty) {
             alert.addAction(UIAlertAction(title: "Delete Photo", style: .destructive) { [weak self] _ in
                 self?.deletePhoto()
@@ -303,7 +285,6 @@ class RecipeDetailViewController: UIViewController {
     @objc private func didTapFavoriteButton() {
         RecipesRepository.shared.toggleFavorite(recipe)
         
-        // Обновляем локальную копию рецепта
         if let updatedRecipe = RecipesRepository.shared.getRecipe(by: recipe.id) {
             recipe = updatedRecipe
             updateFavoriteButton()
@@ -327,7 +308,6 @@ class RecipeDetailViewController: UIViewController {
         contentView.addSubview(ingredientsTextView)
         contentView.addSubview(instructionsLabel)
         contentView.addSubview(instructionsTextView)
-        // ИСПРАВЛЕНИЕ: Добавлены элементы для отображения категорий и тегов
         contentView.addSubview(categoriesLabel)
         contentView.addSubview(categoriesStackView)
         contentView.addSubview(tagsLabel)
@@ -375,7 +355,6 @@ class RecipeDetailViewController: UIViewController {
             instructionsTextView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             instructionsTextView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             
-            // ИСПРАВЛЕНИЕ: Добавлены constraints для категорий и тегов под инструкциями
             categoriesLabel.topAnchor.constraint(equalTo: instructionsTextView.bottomAnchor, constant: 24),
             categoriesLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             categoriesLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
@@ -424,42 +403,33 @@ class RecipeDetailViewController: UIViewController {
         
         instructionsTextView.text = recipe.recipeInstructions ?? "No instructions"
         
-        // ИСПРАВЛЕНИЕ: Настраиваем отображение категорий и тегов
-        // Очищаем старые элементы перед добавлением новых
         categoriesStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         tagsStackView.arrangedSubviews.forEach { $0.removeFromSuperview() }
         
-        // Добавляем категории в виде чипов (badges) с автоматическим переносом на новую строку
         if !recipe.categories.isEmpty {
             categoriesLabel.isHidden = false
-            // Создаём строки категорий с автоматическим переносом
-            createWrappingBadges(items: recipe.categories.map { $0.name }, 
-                                stackView: categoriesStackView, 
-                                badgeCreator: createCategoryBadge)
+            createWrappingBadges(items: recipe.categories.map { $0.name },
+                                 stackView: categoriesStackView,
+                                 badgeCreator: createCategoryBadge)
         } else {
             categoriesLabel.isHidden = true
         }
         
-        // Добавляем теги в виде чипов (badges) с автоматическим переносом на новую строку
         if !recipe.tags.isEmpty {
             tagsLabel.isHidden = false
-            // Создаём строки тегов с автоматическим переносом
-            createWrappingBadges(items: recipe.tags, 
-                                stackView: tagsStackView, 
-                                badgeCreator: createTagBadge)
+            createWrappingBadges(items: recipe.tags,
+                                 stackView: tagsStackView,
+                                 badgeCreator: createTagBadge)
         } else {
             tagsLabel.isHidden = true
         }
     }
     
-    // ИСПРАВЛЕНИЕ: Функция для создания badges с автоматическим переносом на новую строку
-    // Размещает элементы в несколько строк, чтобы они не выходили за границы экрана
-    private func createWrappingBadges(items: [String], 
-                                     stackView: UIStackView, 
-                                     badgeCreator: (String) -> UIView) {
-        // Получаем ширину экрана для расчёта переноса
+    private func createWrappingBadges(items: [String],
+                                      stackView: UIStackView,
+                                      badgeCreator: (String) -> UIView) {
         let screenWidth = view.bounds.width > 0 ? view.bounds.width : UIScreen.main.bounds.width
-        let availableWidth = screenWidth - 32 - 32 // Отступы слева и справа (16 + 16)
+        let availableWidth = screenWidth - 32 - 32
         let spacing: CGFloat = 8
         
         var currentRowStackView: UIStackView?
@@ -470,13 +440,10 @@ class RecipeDetailViewController: UIViewController {
             badge.setContentHuggingPriority(.required, for: .horizontal)
             badge.setContentCompressionResistancePriority(.required, for: .horizontal)
             
-            // Оцениваем ширину badge (приблизительно)
-            // Используем NSString для оценки размера текста
             let font = UIFont.systemFont(ofSize: 14, weight: .medium)
             let attributes = [NSAttributedString.Key.font: font]
-            let estimatedWidth = (item as NSString).size(withAttributes: attributes).width + 24 + spacing // 24 = padding (12 + 12)
+            let estimatedWidth = (item as NSString).size(withAttributes: attributes).width + 24 + spacing
             
-            // Если текущая строка переполнена или её нет, создаём новую строку
             if currentRowStackView == nil || (currentRowWidth + estimatedWidth > availableWidth && currentRowWidth > 0) {
                 currentRowStackView = UIStackView()
                 currentRowStackView!.translatesAutoresizingMaskIntoConstraints = false
@@ -493,8 +460,6 @@ class RecipeDetailViewController: UIViewController {
         }
     }
     
-    // ИСПРАВЛЕНИЕ: Создаём чип (badge) для категории
-    // Чип - это маленький прямоугольник с закруглёнными углами, показывающий название категории
     private func createCategoryBadge(categoryName: String) -> UIView {
         let containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
@@ -522,8 +487,6 @@ class RecipeDetailViewController: UIViewController {
         return containerView
     }
     
-    // ИСПРАВЛЕНИЕ: Создаём чип (badge) для тега
-    // Теги отображаются в сером цвете, чтобы отличаться от категорий
     private func createTagBadge(tagName: String) -> UIView {
         let containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
@@ -566,7 +529,6 @@ class RecipeDetailViewController: UIViewController {
         
         UIPasteboard.general.string = recipeText
         
-        // Show copy notification
         let alert = UIAlertController(title: nil, message: "Recipe copied to clipboard", preferredStyle: .alert)
         alert.addAction(UIAlertAction(title: "OK", style: .default))
         present(alert, animated: true)
@@ -583,7 +545,6 @@ extension RecipeDetailViewController: UIImagePickerControllerDelegate, UINavigat
             recipeImageView.image = image
             recipeImageView.backgroundColor = .clear
             
-            // Сохраняем изображение
             var updatedRecipe = recipe
             updatedRecipe.imageData = image.jpegData(compressionQuality: 0.8)
             RecipesRepository.shared.saveRecipe(updatedRecipe)
@@ -615,7 +576,6 @@ extension RecipeDetailViewController: UnsplashImageSearchViewControllerDelegate 
         recipeImageView.image = image
         recipeImageView.backgroundColor = .clear
         
-        // Сохраняем изображение
         var updatedRecipe = recipe
         updatedRecipe.imageData = image.jpegData(compressionQuality: 0.8)
         updatedRecipe.imageURL = imageURL

@@ -5,53 +5,35 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ ТЕМА 25 CODABLE. Сервис для работы с TheMealDB API.
+// ДЗ ТЕМА 30: Порождающие паттерны. Singleton.
+
 import Foundation
 
-// MARK: - TheMealDBService
-/// Сервис для работы с TheMealDB API (бесплатный API рецептов)
-/// 
-/// КРИТЕРИЙ ОЦЕНКИ: Реализован сетевой слой в отдельной сущности - 20 баллов
-/// Этот сервис использует NetworkService (отдельная сущность для работы с сетью) для выполнения запросов
-///
-/// TheMealDBService - это сервис для загрузки рецептов из интернета через TheMealDB API
-/// TheMealDB - это бесплатный API с большим количеством рецептов со всего мира
-/// Этот сервис позволяет искать рецепты по названию, получать случайные рецепты и т.д.
+// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 25 CODABLE: Сервис для работы с TheMealDB API
+
 class TheMealDBService {
-    // Singleton паттерн - один экземпляр на всё приложение
+    
+    // ПАТТЕРН SINGLETON: Единственный экземпляр сервиса для работы с TheMealDB API
     static let shared = TheMealDBService()
     
-    // Базовый URL для API TheMealDB
     private let baseURL = "https://www.themealdb.com/api/json/v1/1"
     
-    // Используем NetworkService для выполнения сетевых запросов
+    // Реализован сетевой слой в отдельной сущности
     private let networkService = NetworkService.shared
     
-    // Приватный инициализатор (часть паттерна Singleton)
     private init() {}
     
-    // MARK: - API Methods
+    // API методы
     
-    /// Получить случайный рецепт
-    /// 
-    /// КРИТЕРИЙ ОЦЕНКИ: Реализованы 3 метода получения/отправки данных из АПИ - 30 баллов
-    /// Метод 1: Получение случайного рецепта из TheMealDB API
-    /// - Parameter completion: Замыкание с результатом запроса
+    // Метод 1: Получение случайного рецепта из TheMealDB API
     func getRandomRecipe(completion: @escaping (Result<TheMealDBRecipe, NetworkError>) -> Void) {
         guard let url = URL(string: "\(baseURL)/random.php") else {
             completion(.failure(.invalidResponse))
             return
         }
         
-        // ДОМАШНЕЕ ЗАДАНИЕ: Использование Codable для работы с API
-        // КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-        //
-        // Использование сетевого слоя с Codable для автоматической десериализации
-        // NetworkService.get использует JSONDecoder для декодирования JSON в Codable структуру
-        // TheMealDBRandomResponse.self - метатип, указывающий тип для декодирования
-        //
-        // КРИТЕРИЙ ОЦЕНКИ: Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
-        // Обработка результатов и ошибок происходит через Result<T, NetworkError>
-        // NetworkError - централизованный enum ошибок для всех сетевых операций
+        // Поддерживается общая обработка результатов/ошибок от АПИ
         networkService.get(url: url, responseType: TheMealDBRandomResponse.self) { result in
             switch result {
             case .success(let response):
@@ -66,13 +48,7 @@ class TheMealDBService {
         }
     }
     
-    /// Поиск рецептов по названию
-    /// 
-    /// КРИТЕРИЙ ОЦЕНКИ: Реализованы 3 метода получения/отправки данных из АПИ - 30 баллов
-    /// Метод 2: Поиск рецептов по названию в TheMealDB API
-    /// - Parameters:
-    ///   - name: Название рецепта для поиска
-    ///   - completion: Замыкание с результатом запроса
+    // Метод 2: Поиск рецептов по названию в TheMealDB API
     func searchRecipesByName(_ name: String, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
         guard let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseURL)/search.php?s=\(encodedName)") else {
@@ -80,10 +56,6 @@ class TheMealDBService {
             return
         }
         
-        // КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-        // Использование сетевого слоя с Codable для автоматической десериализации
-        // КРИТЕРИЙ ОЦЕНКИ: Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
-        // Обработка результатов и ошибок происходит через Result<T, NetworkError>
         networkService.get(url: url, responseType: TheMealDBSearchResponse.self) { result in
             switch result {
             case .success(let response):
@@ -95,15 +67,7 @@ class TheMealDBService {
         }
     }
     
-    /// Получить рецепты по категории
-    /// 
-    /// КРИТЕРИЙ ОЦЕНКИ: Реализованы 3 метода получения/отправки данных из АПИ - 30 баллов
-    /// Метод 3: Получение рецептов по категории из TheMealDB API
-    /// - Parameters:
-    ///   - category: Название категории (например: "Beef", "Chicken", "Dessert")
-    ///   - offset: Смещение для пагинации
-    ///   - limit: Количество рецептов для загрузки
-    ///   - completion: Замыкание с результатом запроса
+    // Метод 3: Получение рецептов по категории из TheMealDB API
     func getRecipesByCategory(_ category: String, offset: Int = 0, limit: Int = 10, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
         guard let encodedCategory = category.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseURL)/filter.php?c=\(encodedCategory)") else {
@@ -111,23 +75,17 @@ class TheMealDBService {
             return
         }
         
-        // Для фильтра по категории сначала получаем список рецептов
-        // КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-        // Использование сетевого слоя с Codable для автоматической десериализации
-        // КРИТЕРИЙ ОЦЕНКИ: Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
-        // Обработка результатов и ошибок происходит через Result<T, NetworkError>
+        // Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
         networkService.get(url: url, responseType: TheMealDBFilterResponse.self) { [weak self] result in
             switch result {
             case .success(let filterResponse):
                 let mealIds = filterResponse.meals?.compactMap { $0.idMeal } ?? []
                 
-                // Получаем детали каждого рецепта
                 if mealIds.isEmpty {
                     completion(.success([]))
                     return
                 }
                 
-                // Применяем пагинацию
                 let endIndex = min(offset + limit, mealIds.count)
                 guard offset < mealIds.count else {
                     completion(.success([]))
@@ -142,10 +100,7 @@ class TheMealDBService {
         }
     }
     
-    /// Получить рецепт по ID
-    /// - Parameters:
-    ///   - id: ID рецепта
-    ///   - completion: Замыкание с результатом запроса
+    // Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
     func getRecipeById(_ id: String, completion: @escaping (Result<TheMealDBRecipe, NetworkError>) -> Void) {
         guard let encodedId = id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseURL)/lookup.php?i=\(encodedId)") else {
@@ -153,10 +108,6 @@ class TheMealDBService {
             return
         }
         
-        // КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-        // Использование сетевого слоя с Codable для автоматической десериализации
-        // КРИТЕРИЙ ОЦЕНКИ: Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
-        // Обработка результатов и ошибок происходит через Result<T, NetworkError>
         networkService.get(url: url, responseType: TheMealDBLookupResponse.self) { result in
             switch result {
             case .success(let response):
@@ -171,21 +122,13 @@ class TheMealDBService {
         }
     }
     
-    /// Получить список всех категорий
-    /// 
-    /// КРИТЕРИЙ ОЦЕНКИ: Реализованы 3 метода получения/отправки данных из АПИ - 30 баллов
-    /// Метод 4: Получение списка категорий из TheMealDB API
-    /// - Parameter completion: Замыкание с результатом запроса
+    // Метод 4: Получение списка категорий из TheMealDB API
     func getCategories(completion: @escaping (Result<[TheMealDBCategory], NetworkError>) -> Void) {
         guard let url = URL(string: "\(baseURL)/list.php?c=list") else {
             completion(.failure(.invalidResponse))
             return
         }
         
-        // КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-        // Использование сетевого слоя с Codable для автоматической десериализации
-        // КРИТЕРИЙ ОЦЕНКИ: Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
-        // Обработка результатов и ошибок происходит через Result<T, NetworkError>
         networkService.get(url: url, responseType: TheMealDBCategoriesResponse.self) { result in
             switch result {
             case .success(let response):
@@ -196,8 +139,6 @@ class TheMealDBService {
             }
         }
     }
-    
-    // MARK: - Private Helpers
     
     private func fetchRecipesDetails(ids: [String], completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
         let group = DispatchGroup()
@@ -226,11 +167,8 @@ class TheMealDBService {
         }
     }
     
-    // MARK: - Conversion
-    
-    /// Преобразует TheMealDB рецепт в APIRecipe для совместимости
+    // Преобразование
     func convertToAPIRecipe(_ mealDBRecipe: TheMealDBRecipe) -> APIRecipe {
-        // Парсим ингредиенты из рецепта
         var ingredients: [APIIngredient] = []
         
         let ingredientPairs: [(String?, String?)] = [
@@ -262,7 +200,6 @@ class TheMealDBService {
                 continue
             }
             
-            // Парсим количество из строки (например, "1 cup" -> amount: 1, unit: "cup")
             var amount: Double? = nil
             var unit: String? = nil
             
@@ -283,7 +220,6 @@ class TheMealDBService {
             ingredients.append(APIIngredient(name: name, amount: amount, unit: unit))
         }
         
-        // Парсим теги из strTags (формат: "tag1,tag2,tag3")
         var tags: [String] = []
         if let strTags = mealDBRecipe.strTags, !strTags.isEmpty {
             tags = strTags.components(separatedBy: ",")
@@ -299,26 +235,15 @@ class TheMealDBService {
             instructions: mealDBRecipe.strInstructions,
             extendedIngredients: ingredients.isEmpty ? nil : ingredients,
             tags: tags.isEmpty ? nil : tags,
-            cookingTime: nil, // TheMealDB API не предоставляет время приготовления
-            servings: nil, // TheMealDB API не предоставляет количество порций
-            difficulty: nil, // TheMealDB API не предоставляет сложность
-            calories: nil // TheMealDB API не предоставляет калорийность
+            cookingTime: nil,
+            servings: nil,
+            difficulty: nil,
+            calories: nil
         )
     }
 }
 
-// MARK: - TheMealDB Models (Codable)
-// ДОМАШНЕЕ ЗАДАНИЕ: Использование Codable для работы с API
-// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-
-/// Модель рецепта из TheMealDB API
-/// 
-/// TheMealDBRecipe - пример структуры Codable с большим количеством опциональных свойств
-/// TheMealDB API использует префиксы "str" и "id" для всех полей (например, "strMeal", "idMeal")
-/// Все свойства опциональные, так как API может возвращать неполные данные
-///
-/// ВАЖНО: TheMealDB API имеет нестандартную структуру - все поля опциональные
-/// Это позволяет обрабатывать случаи, когда некоторые поля отсутствуют
+// TheMealDB Codable модели
 struct TheMealDBRecipe: Codable {
     let idMeal: String?
     let strMeal: String?
@@ -375,56 +300,32 @@ struct TheMealDBRecipe: Codable {
     let dateModified: String?
 }
 
-/// Ответ API для случайного рецепта
-/// ДОМАШНЕЕ ЗАДАНИЕ: Использование Codable для работы с API
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
-///
-/// TheMealDBRandomResponse - обёртка для ответа API
-/// Содержит массив рецептов в поле "meals"
-/// Массив опциональный, так как API может вернуть пустой ответ
-///
-/// Пример JSON:
-/// {
-///   "meals": [{...}]  // массив с одним рецептом
-/// }
 struct TheMealDBRandomResponse: Codable {
     let meals: [TheMealDBRecipe]?
 }
 
-/// Ответ API для поиска по названию
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
 struct TheMealDBSearchResponse: Codable {
     let meals: [TheMealDBRecipe]?
 }
 
-/// Ответ API для фильтрации по категории
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
 struct TheMealDBFilterResponse: Codable {
     let meals: [TheMealDBFilterItem]?
 }
 
-/// Элемент фильтра (только ID и название)
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
 struct TheMealDBFilterItem: Codable {
     let strMeal: String?
     let strMealThumb: String?
     let idMeal: String?
 }
 
-/// Ответ API для получения по ID
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
 struct TheMealDBLookupResponse: Codable {
     let meals: [TheMealDBRecipe]?
 }
 
-/// Ответ API для списка категорий
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
 struct TheMealDBCategoriesResponse: Codable {
     let meals: [TheMealDBCategory]?
 }
 
-/// Модель категории
-/// КРИТЕРИЙ ОЦЕНКИ: Использование Codable - 30 баллов
 struct TheMealDBCategory: Codable {
     let strCategory: String?
 }

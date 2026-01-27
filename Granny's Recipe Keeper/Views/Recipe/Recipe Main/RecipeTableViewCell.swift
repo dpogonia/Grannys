@@ -5,20 +5,11 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ ТЕМА 27: Operation, OperationQueue. Использование очереди загрузки изображений
+
 import UIKit
 
-// MARK: - RecipeTableViewCell
-// RecipeTableViewCell - это ячейка таблицы для отображения рецепта в списке
-// UITableViewCell - это базовый класс для ячеек таблицы
-// Каждая ячейка показывает название рецепта, фото и другую информацию
-//
-// АНАЛОГИЯ: Это как карточка в каталоге библиотеки - на ней написано название книги,
-// есть обложка и краткая информация
 class RecipeTableViewCell: UITableViewCell {
-    // Статическое свойство - общее для всех экземпляров класса
-    // cellIdentifier - это "имя" ячейки, используется для регистрации и переиспользования
-    // Переиспользование ячеек - это оптимизация: вместо создания новых ячеек
-    // для каждого рецепта, мы переиспользуем существующие (экономия памяти)
     static let cellIdentifier: String = "RecipeTableViewCell"
     
     private let nameLabel: UILabel = {
@@ -65,54 +56,36 @@ class RecipeTableViewCell: UITableViewCell {
         return gradient
     }()
     
-    // Текущая операция загрузки изображения для этой ячейки
-    // Нужна для отмены загрузки, если ячейка переиспользуется
     private var currentLoadOperation: Operation?
     
     func configure(with recipe: Recipe) {
         nameLabel.text = recipe.name
         
-        // Отменяем предыдущую загрузку, если она была
-        // Это важно при переиспользовании ячеек: старая загрузка может быть не нужна
         currentLoadOperation?.cancel()
         currentLoadOperation = nil
         
         if let image = recipe.image {
-            // Если изображение уже есть в рецепте (локальное), показываем его сразу
             recipeImageView.image = image
             recipeImageView.backgroundColor = .clear
         } else if let imageURL = recipe.imageURL, !imageURL.isEmpty {
-            // ДОМАШНЕЕ ЗАДАНИЕ: Использование очереди загрузки изображений
-            // КРИТЕРИЙ ОЦЕНКИ: Организована очередь загрузки - 50 баллов
-            // КРИТЕРИЙ ОЦЕНКИ: Очередь сделана в отдельном классе - 20 баллов
-            // Используем ImageLoadQueueManager для загрузки изображения через OperationQueue
-            // Это позволяет:
-            // 1. Отменить загрузку, если ячейка больше не видна
-            // 2. Ограничить количество одновременных загрузок (не перегружать сеть)
-            // 3. Управлять приоритетами загрузки
+            // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27: Operation, OperationQueue.
+            // Организована очередь загрузки
+            // Очередь сделана в отдельном классе
             currentLoadOperation = ImageLoadQueueManager.shared.loadImage(urlString: imageURL) { [weak self] result in
-                // [weak self] - слабая ссылка, чтобы избежать утечек памяти
-                // Если ячейка уже удалена, self будет nil, и ничего не произойдёт
-                
-                // Проверяем, что ячейка ещё существует и операция не была отменена
                 guard let self = self else { return }
                 
                 switch result {
                 case .success(let image):
-                    // Успешно загрузили - показываем изображение
                     self.recipeImageView.image = image
                     self.recipeImageView.backgroundColor = .clear
                 case .failure:
-                    // Ошибка загрузки - показываем изображение по умолчанию
                     self.recipeImageView.image = UIImage(named: "default")
                     self.recipeImageView.backgroundColor = .secondarySystemBackground
                 }
                 
-                // Очищаем ссылку на операцию после завершения
                 self.currentLoadOperation = nil
             }
         } else {
-            // Нет URL изображения - показываем изображение по умолчанию
             recipeImageView.image = UIImage(named: "default")
             recipeImageView.backgroundColor = .secondarySystemBackground
         }
@@ -131,15 +104,11 @@ class RecipeTableViewCell: UITableViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         
-        // ДОМАШНЕЕ ЗАДАНИЕ: Отмена загрузки при переиспользовании ячейки
-        // КРИТЕРИЙ ОЦЕНКИ: Организована очередь загрузки - 50 баллов
-        // Когда ячейка переиспользуется (пользователь прокрутил список),
-        // нужно отменить загрузку старого изображения, чтобы не тратить ресурсы
-        // Это важная оптимизация для производительности
+        // Отмена загрузки при переиспользовании ячейки
+        // Организована очередь загрузки
         currentLoadOperation?.cancel()
         currentLoadOperation = nil
         
-        // Очищаем UI перед переиспользованием
         recipeImageView.image = nil
         nameLabel.text = nil
         cardContainerView.transform = .identity

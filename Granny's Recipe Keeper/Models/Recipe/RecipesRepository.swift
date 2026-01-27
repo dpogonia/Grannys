@@ -5,38 +5,36 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ ТЕМА 31: Структурные паттерны. Facade.
+
 import Foundation
 import CoreData
 import UIKit
 
 // MARK: - RecipesRepository
-// RecipesRepository - это репозиторий (хранилище) для работы с рецептами
-// Репозиторий - это паттерн проектирования: он скрывает детали работы с базой данных
-// и предоставляет простые методы для работы с данными
-//
-// АНАЛОГИЯ: Репозиторий - это как библиотекарь в библиотеке
-// Ты не знаешь, как именно книги хранятся на полках, но можешь попросить:
-// "Дай мне все книги про кулинарию" или "Сохрани эту новую книгу"
-// Репозиторий знает, как найти и сохранить данные в базе
+
+// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 31: СТРУКТУРНЫЕ ПАТТЕРНЫ
+// ПАТТЕРН 1: FACADE (ФАСАД)
+// Класс RecipesRepository является фасадом для сложной системы Core Data. Предоставляет простой интерфейс для работы с рецептами, скрывая сложность Core Data
+// - Что скрывает фасад:
+// NSManagedObjectContext и его настройка
+// NSFetchRequest и предикаты
+// Маппинг между Entity (Core Data) и Model (Recipe)
+// Управление связями между сущностями (recipes, categories, ingredients)
+// Обработка ошибок Core Data
+// Инициализация дефолтных категорий
 
 class RecipesRepository {
-    // Singleton паттерн - один экземпляр на всё приложение
     static let shared = RecipesRepository()
     
-    // Контекст Core Data для работы с базой данных
-    // Это "рабочая область" - все операции с данными происходят через контекст
     private let context: NSManagedObjectContext
     
-    // Приватный инициализатор (часть паттерна Singleton)
     private init() {
-        // Получаем главный контекст из CoreDataManager
         self.context = CoreDataManager.shared.viewContext
-        // При первом запуске создаём стандартные категории (Завтрак, Обед и т.д.)
         initializeDefaultCategoriesIfNeeded()
     }
     
     // MARK: - Categories
-    
     func getAllCategories() -> [Category] {
         let fetchRequest = NSFetchRequest<CategoryEntity>(entityName: "CategoryEntity")
         
@@ -44,7 +42,6 @@ class RecipesRepository {
             let entities = try context.fetch(fetchRequest)
             let categories = entities.compactMap { Category(from: $0) }
             
-            // Сортируем по order, затем по имени
             let sortedCategories = categories.sorted { category1, category2 in
                 if category1.order != category2.order {
                     return category1.order < category2.order
@@ -74,18 +71,15 @@ class RecipesRepository {
     }
     
     func saveCategory(_ category: Category) {
-        // Проверяем, существует ли уже категория с таким ID
         let fetchRequest = NSFetchRequest<CategoryEntity>(entityName: "CategoryEntity")
         fetchRequest.predicate = NSPredicate(format: "id == %@", category.id as CVarArg)
         
         do {
             if let existing = try context.fetch(fetchRequest).first {
-                // Категория существует, обновляем её
                 existing.name = category.name
                 existing.isDefault = category.isDefault
                 existing.order = category.order
             } else {
-                // Создаем новую категорию
                 _ = category.toEntity(in: context)
             }
             CoreDataManager.shared.saveContext()
@@ -110,24 +104,20 @@ class RecipesRepository {
     
     private func initializeDefaultCategoriesIfNeeded() {
         let defaultCategoryNames = ["Breakfast", "Lunch", "Dinner", "Soups", "Salads", "Desserts", "Beverages"]
-        // ИСПРАВЛЕНИЕ: Изменён порядок категорий по умолчанию
-        // Десерты теперь идут после Ужина (Dinner), но перед Супами (Soups)
-        // Правильный порядок: Breakfast -> Lunch -> Dinner -> Desserts -> Soups -> Salads -> Beverages
         let defaultCategoryOrders: [String: Int32] = [
             "Breakfast": 0,
             "Lunch": 1,
             "Dinner": 2,
-            "Desserts": 3,  // Десерты после Ужина, но перед Супами
-            "Soups": 4,     // Супы после Десертов
-            "Salads": 5,    // Салаты после Супов
-            "Beverages": 6  // Напитки в конце
+            "Desserts": 3,
+            "Soups": 4,
+            "Salads": 5,
+            "Beverages": 6
         ]
         
         let fetchRequest = NSFetchRequest<CategoryEntity>(entityName: "CategoryEntity")
         do {
             let existingCategories = try context.fetch(fetchRequest)
             
-            // Переименовываем "Main Courses" в "Lunch" если существует
             for category in existingCategories {
                 if category.name == "Main Courses" {
                     category.name = "Lunch"
@@ -135,7 +125,6 @@ class RecipesRepository {
                 }
             }
             
-            // Удаляем дубликаты по имени (оставляем первую найденную)
             var seenNames: Set<String> = []
             var duplicatesToDelete: [CategoryEntity] = []
             
@@ -145,37 +134,24 @@ class RecipesRepository {
                     duplicatesToDelete.append(category)
                 } else {
                     seenNames.insert(name)
-                    // ИСПРАВЛЕНИЕ: Обновляем order для существующих категорий по умолчанию
-                    // Если категория является стандартной (из defaultCategoryOrders) и её order равен 0,
-                    // устанавливаем правильный порядок из defaultCategoryOrders
-                    // Это гарантирует, что категории будут в правильном порядке: Breakfast -> Lunch -> Dinner -> Desserts -> Soups -> ...
                     if category.order == 0 && defaultCategoryOrders[name] != nil {
                         category.order = defaultCategoryOrders[name] ?? 0
                     }
                 }
             }
             
-            // ИСПРАВЛЕНИЕ: Дополнительно обновляем порядок стандартных категорий до правильного значения
-            // Это исправляет ситуацию, когда категории были созданы со старым порядком или перемещены пользователем
-            // Обновляем только стандартные категории (isDefault == true), чтобы не трогать пользовательские категории
-            // Правильный порядок: Breakfast(0) -> Lunch(1) -> Dinner(2) -> Desserts(3) -> Soups(4) -> Salads(5) -> Beverages(6)
             for category in existingCategories {
                 if let name = category.name as String?,
                    let correctOrder = defaultCategoryOrders[name],
                    category.isDefault {
-                    // Обновляем порядок стандартной категории до правильного значения
-                    // Это гарантирует, что стандартные категории всегда будут в правильном порядке
-                    // независимо от того, как пользователь их перемещал ранее
                     category.order = correctOrder
                 }
             }
             
-            // Удаляем дубликаты
             for duplicate in duplicatesToDelete {
                 context.delete(duplicate)
             }
             
-            // Создаем только те категории, которых еще нет
             for categoryName in defaultCategoryNames {
                 if !seenNames.contains(categoryName) {
                     let order = defaultCategoryOrders[categoryName] ?? 0
@@ -193,7 +169,6 @@ class RecipesRepository {
     }
     
     // MARK: - Recipes
-    
     func getAllRecipes(archived: Bool = false) -> [Recipe] {
         let fetchRequest = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
         fetchRequest.predicate = NSPredicate(format: "isArchived == %@", NSNumber(value: archived))
@@ -209,36 +184,16 @@ class RecipesRepository {
     }
     
     func getRecipes(in category: Category?, archived: Bool = false) -> [Recipe] {
-        // NSFetchRequest - это запрос к базе данных (как SELECT в SQL)
-        // RecipeEntity - тип сущности, которую мы ищем
         let fetchRequest = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
         
-        // NSPredicate - это условие для фильтрации (как WHERE в SQL)
-        // Создаём массив предикатов (условий), чтобы объединить их позже
-        
-        // Первое условие: фильтр по архивированности
-        // format: "isArchived == %@" - это строка формата (как printf в C)
-        // %@ - это placeholder для объекта (NSNumber)
-        // NSNumber(value: archived) - преобразуем Bool в NSNumber (Core Data требует NSNumber)
         var predicates: [NSPredicate] = [NSPredicate(format: "isArchived == %@", NSNumber(value: archived))]
         
-        // Если указана категория, добавляем условие фильтрации по категории
         if let category = category {
-            // "ANY categories.id == %@" - это предикат для связей (relationships)
-            // ANY означает "хотя бы один элемент в коллекции categories"
-            // categories.id - обращаемся к свойству id через связь categories
-            // CVarArg - это тип для передачи в variadic функции (функции с переменным числом аргументов)
             predicates.append(NSPredicate(format: "ANY categories.id == %@", category.id as CVarArg))
         }
         
-        // NSCompoundPredicate - объединяет несколько предикатов
-        // andPredicateWithSubpredicates - все условия должны выполняться одновременно (AND)
-        // АНАЛОГИЯ: Как поиск в интернете с несколькими фильтрами - все должны совпадать
         fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: predicates)
         
-        // NSSortDescriptor - описывает, как сортировать результаты
-        // key: "createdAt" - сортируем по дате создания
-        // ascending: false - по убыванию (новые сначала)
         fetchRequest.sortDescriptors = [NSSortDescriptor(key: "createdAt", ascending: false)]
         
         do {
@@ -254,16 +209,7 @@ class RecipesRepository {
         let fetchRequest = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
         
         var predicates: [NSPredicate] = [
-            // Условие 1: только неархивированные рецепты
             NSPredicate(format: "isArchived == %@", NSNumber(value: false)),
-            
-            // Условие 2: поиск по названию ИЛИ инструкциям
-            // CONTAINS[cd] - оператор поиска подстроки
-            //   CONTAINS - содержит подстроку
-            //   [c] - case insensitive (без учёта регистра): "Pasta" найдёт "pasta"
-            //   [d] - diacritic insensitive (без учёта диакритики): "café" найдёт "cafe"
-            // OR - логическое ИЛИ: хотя бы одно условие должно выполняться
-            // АНАЛОГИЯ: Как поиск в Google - ищет в названии или описании
             NSPredicate(format: "name CONTAINS[cd] %@ OR recipeInstructions CONTAINS[cd] %@", query, query)
         ]
         
@@ -329,7 +275,6 @@ class RecipesRepository {
     }
     
     // MARK: - Favorites
-    
     func getFavoriteRecipes() -> [Recipe] {
         let fetchRequest = NSFetchRequest<RecipeEntity>(entityName: "RecipeEntity")
         fetchRequest.predicate = NSCompoundPredicate(andPredicateWithSubpredicates: [
@@ -366,16 +311,12 @@ class RecipesRepository {
     }
     
     // MARK: - Mock Data
-    
     private static func loadImageData(fromAssets name: String) -> Data? {
-        // Загружаем изображение из Assets.xcassets по имени
         if let image = UIImage(named: name),
            let imageData = image.jpegData(compressionQuality: 0.8) {
             return imageData
         }
         
-        // Если не найдено в Assets, пробуем загрузить из bundle по имени файла
-        // Поддерживаем форматы: jpg, jpeg, png
         let imageExtensions = ["jpg", "jpeg", "png"]
         
         for ext in imageExtensions {
