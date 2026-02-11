@@ -5,17 +5,11 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ. Singleton.
-
 import CoreData
 import UIKit
 
-// ДЗ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ
-// ПАТТЕРН 1: SINGLETON
-// Описание: CoreDataManager реализует паттерн Singleton для обеспечения единственного экземпляра менеджера Core Data во всем приложении. Гарантирует единый контекст Core Data, предотвращает конфликты данных.
 class CoreDataManager {
     
-    // ПАТТЕРН SINGLETON: Единственный экземпляр класса, доступный глобально
     static let shared = CoreDataManager()
     
     lazy var persistentContainer: NSPersistentContainer = {

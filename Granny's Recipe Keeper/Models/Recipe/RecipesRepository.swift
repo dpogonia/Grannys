@@ -5,24 +5,9 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 31: Структурные паттерны. Facade.
-
 import Foundation
 import CoreData
 import UIKit
-
-// MARK: - RecipesRepository
-
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 31: СТРУКТУРНЫЕ ПАТТЕРНЫ
-// ПАТТЕРН 1: FACADE (ФАСАД)
-// Класс RecipesRepository является фасадом для сложной системы Core Data. Предоставляет простой интерфейс для работы с рецептами, скрывая сложность Core Data
-// - Что скрывает фасад:
-// NSManagedObjectContext и его настройка
-// NSFetchRequest и предикаты
-// Маппинг между Entity (Core Data) и Model (Recipe)
-// Управление связями между сущностями (recipes, categories, ingredients)
-// Обработка ошибок Core Data
-// Инициализация дефолтных категорий
 
 class RecipesRepository {
     static let shared = RecipesRepository()

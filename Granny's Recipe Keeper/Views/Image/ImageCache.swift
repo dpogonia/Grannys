@@ -5,42 +5,72 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 27 Operation, OperationQueue. Реализация кэширования изображений.
-// ДЗ ТЕМА 30: Порождающие паттерны. Singleton.
-
 import UIKit
 
-// MARK: - ImageCache
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27 Operation, OperationQueue: Реализация кэширования изображений
-// Реализовано кэширование
-// Двухуровневая система кэширования: в памяти (NSCache) и на диске (FileManager)
+enum ImageLoadError: Error, LocalizedError {
+    case invalidURL
+    case networkError(Error)
+    case invalidData
+    case decodingFailed
+    case cancelled
+    case fileSystemError
+    
+    var errorDescription: String? {
+        switch self {
+        case .invalidURL:
+            return "Invalid image URL"
+        case .networkError(let error):
+            return "Network error: \(error.localizedDescription)"
+        case .invalidData:
+            return "Invalid image data received"
+        case .decodingFailed:
+            return "Failed to decode image"
+        case .cancelled:
+            return "Image load was cancelled"
+        case .fileSystemError:
+            return "File system error while caching"
+        }
+    }
+}
 
 class ImageCache {
-    // ПАТТЕРН SINGLETON: Единственный экземпляр кэша изображений
     static let shared = ImageCache()
     
-    // Кэш в памяти с автоматической очисткой при нехватке памяти
     private let cache = NSCache<NSString, UIImage>()
     
     private let fileManager = FileManager.default
     private let cacheDirectory: URL
     
     private init() {
-        
-        // Настройка кэша в памяти
         cache.countLimit = 100
-        cache.totalCostLimit = 100 * 1024 * 1024 // 100 MB
+        cache.totalCostLimit = 100 * 1024 * 1024
         
-        // Создание директории для кэша на диске
         let cachesDirectory = fileManager.urls(for: .cachesDirectory, in: .userDomainMask)[0]
         cacheDirectory = cachesDirectory.appendingPathComponent("ImageCache", isDirectory: true)
         
         if !fileManager.fileExists(atPath: cacheDirectory.path) {
             try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
         }
+        
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMemoryWarning),
+            name: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil
+        )
+        
+        print("📦 ImageCache initialized with memory warning handler")
     }
     
-    // Получение изображения: сначала из памяти, затем с диска
+    @objc private func handleMemoryWarning() {
+        print("⚠️ Memory warning received - clearing image cache in memory")
+        clearMemoryCache()
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
+    }
+    
     func image(for urlString: String) -> UIImage? {
         if let cachedImage = cache.object(forKey: urlString as NSString) {
             return cachedImage
@@ -54,7 +84,6 @@ class ImageCache {
         return nil
     }
     
-    // Сохранение изображения в кэш (память и диск)
     func setImage(_ image: UIImage, for urlString: String) {
         cache.setObject(image, forKey: urlString as NSString)
         
@@ -86,10 +115,38 @@ class ImageCache {
         try? data.write(to: fileURL)
     }
     
+    func clearMemoryCache() {
+        cache.removeAllObjects()
+        print("🗑️ Memory cache cleared")
+    }
+    
     func clearCache() {
         cache.removeAllObjects()
-        try? fileManager.removeItem(at: cacheDirectory)
-        try? fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+        
+        do {
+            try fileManager.removeItem(at: cacheDirectory)
+            try fileManager.createDirectory(at: cacheDirectory, withIntermediateDirectories: true)
+            print("🗑️ Full cache cleared (memory + disk)")
+        } catch {
+            print("❌ Error clearing disk cache: \(error.localizedDescription)")
+        }
+    }
+    
+    func getCacheSize() -> Int64 {
+        guard let enumerator = fileManager.enumerator(at: cacheDirectory, includingPropertiesForKeys: [.fileSizeKey]) else {
+            return 0
+        }
+        
+        var totalSize: Int64 = 0
+        for case let fileURL as URL in enumerator {
+            guard let resourceValues = try? fileURL.resourceValues(forKeys: [.fileSizeKey]),
+                  let fileSize = resourceValues.fileSize else {
+                continue
+            }
+            totalSize += Int64(fileSize)
+        }
+        
+        return totalSize
     }
 }
 

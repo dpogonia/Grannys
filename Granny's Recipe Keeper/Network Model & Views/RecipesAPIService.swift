@@ -5,20 +5,15 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 25 CODABLE. Фото Unsplash.
-
 import Foundation
 import UIKit
 
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 25 CODABLE: Использование Codable для работы с API.
-// Структура для хранения данных о фотографии из Unsplash API
 struct UnsplashPhoto: Codable {
     let id: String
     let urls: UnsplashPhotoURLs
     let description: String?
     let altDescription: String?
     
-    // CodingKeys для маппинга между именами свойств Swift и ключами JSON
     enum CodingKeys: String, CodingKey {
         case id
         case urls
@@ -27,7 +22,6 @@ struct UnsplashPhoto: Codable {
     }
 }
 
-// UnsplashPhotoURLs
 struct UnsplashPhotoURLs: Codable {
     let raw: String
     let full: String
@@ -36,8 +30,6 @@ struct UnsplashPhotoURLs: Codable {
     let thumb: String
 }
 
-// UnsplashSearchResponse
-// Модель ответа API для поиска изображений, содержащая массив Codable структур
 struct UnsplashSearchResponse: Codable {
     let results: [UnsplashPhoto]
     let total: Int

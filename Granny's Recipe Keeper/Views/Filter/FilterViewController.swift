@@ -5,16 +5,10 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 32: ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ. Observer.
-
 import UIKit
 
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 32: ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ
-// ПАТТЕРН 3: Наблюдатель через Delegate.
-// FilterViewControllerDelegate уведомляет наблюдателей о применении фильтров. Когда пользователь применяет фильтры, все подписанные контроллеры обновляются. Слабая связанность, множественные наблюдатели.
-
 protocol FilterViewControllerDelegate: AnyObject {
-    func didApplyFilters(selectedTags: Set<String>, selectedDifficulty: String?)
+    func didApplyFilters(selectedTags: Set<String>, selectedDifficulty: String?, selectedIngredients: Set<String>)
 }
 
 class FilterViewController: UIViewController {
@@ -27,8 +21,12 @@ class FilterViewController: UIViewController {
     
     private var selectedDifficulty: String?
     
+    private var allIngredients: [String] = []
+    private var selectedIngredients: Set<String> = []
+    
     private var isDifficultyExpanded = false
     private var isTagsExpanded = false
+    private var isIngredientsExpanded = false
     
     private lazy var tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -66,10 +64,19 @@ class FilterViewController: UIViewController {
     }
     
     
-    init(selectedTags: Set<String> = [], selectedDifficulty: String? = nil) {
+    init(selectedTags: Set<String> = [], selectedDifficulty: String? = nil, selectedIngredients: Set<String> = []) {
         super.init(nibName: nil, bundle: nil)
-        self.selectedTags = selectedTags
-        self.selectedDifficulty = selectedDifficulty
+
+        // ПАТТЕРН MEMENTO: Восстановление сохраненного состояния фильтров
+        if let memento = FilterCaretaker.shared.restoreFilterState() {
+            self.selectedTags = memento.tagsSet
+            self.selectedDifficulty = memento.selectedDifficulty
+            self.selectedIngredients = memento.ingredientsSet
+        } else {
+            self.selectedTags = selectedTags
+            self.selectedDifficulty = selectedDifficulty
+            self.selectedIngredients = selectedIngredients
+        }
     }
     
     required init?(coder: NSCoder) {
@@ -81,6 +88,7 @@ class FilterViewController: UIViewController {
         setupView()
         setupNavigationBar()
         loadAllTags()
+        loadAllIngredients()
         setupLayout()
     }
     
@@ -129,6 +137,30 @@ class FilterViewController: UIViewController {
         allTags = TagsManager.shared.getAllTagsFromRecipes()
     }
     
+    private func loadAllIngredients() {
+        // Загружаем топ популярных ингредиентов
+        TheMealDBService.shared.getIngredients { [weak self] result in
+            DispatchQueue.main.async {
+                switch result {
+                case .success(let ingredients):
+                    let topIngredients = ["Chicken", "Beef", "Pork", "Salmon", "Tomato",
+                                         "Onion", "Garlic", "Cheese", "Pasta", "Rice",
+                                         "Potato", "Carrot", "Mushroom", "Lemon", "Pepper",
+                                         "Butter", "Egg", "Flour", "Milk", "Oil"]
+                    
+                    self?.allIngredients = ingredients
+                        .compactMap { $0.strIngredient }
+                        .filter { topIngredients.contains($0) }
+                        .sorted()
+                    
+                    self?.tableView.reloadData()
+                case .failure:
+                    break
+                }
+            }
+        }
+    }
+    
     private func updateDifficultyControl() {
         tableView.reloadRows(at: [IndexPath(row: 0, section: 0)], with: .none)
     }
@@ -147,9 +179,16 @@ class FilterViewController: UIViewController {
     }
     
     @objc private func didTapApplyButton() {
-        
+        // ПАТТЕРН MEMENTO: Сохранение состояния фильтров
+        let memento = FilterMemento(
+            selectedTags: selectedTags,
+            selectedDifficulty: selectedDifficulty,
+            selectedIngredients: selectedIngredients
+        )
+        FilterCaretaker.shared.saveFilterState(memento: memento)
+
         // ПАТТЕРН OBSERVER: Уведомление наблюдателей о применении фильтров
-        delegate?.didApplyFilters(selectedTags: selectedTags, selectedDifficulty: selectedDifficulty)
+        delegate?.didApplyFilters(selectedTags: selectedTags, selectedDifficulty: selectedDifficulty, selectedIngredients: selectedIngredients)
         navigationController?.dismiss(animated: true)
     }
     
@@ -159,18 +198,22 @@ class FilterViewController: UIViewController {
     
     @objc private func didTapClearButton() {
         selectedTags.removeAll()
+        selectedIngredients.removeAll()
         selectedDifficulty = nil
         difficultySegmentedControl?.selectedSegmentIndex = UISegmentedControl.noSegment
         tableView.reloadData()
-        
-        delegate?.didApplyFilters(selectedTags: selectedTags, selectedDifficulty: selectedDifficulty)
+
+        // ПАТТЕРН MEMENTO: Очистка сохраненного состояния фильтров
+        FilterCaretaker.shared.clearFilterState()
+
+        delegate?.didApplyFilters(selectedTags: selectedTags, selectedDifficulty: selectedDifficulty, selectedIngredients: selectedIngredients)
         navigationController?.dismiss(animated: true)
     }
 }
 
 extension FilterViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 2
+        return 3
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -179,6 +222,8 @@ extension FilterViewController: UITableViewDataSource {
             return isDifficultyExpanded ? 1 : 0
         case 1:
             return isTagsExpanded ? allTags.count : 0
+        case 2:
+            return isIngredientsExpanded ? allIngredients.count : 0
         default:
             return 0
         }
@@ -205,6 +250,9 @@ extension FilterViewController: UITableViewDataSource {
         case 1:
             sectionTitle = "Tags"
             isExpanded = isTagsExpanded
+        case 2:
+            sectionTitle = "Ingredients"
+            isExpanded = isIngredientsExpanded
         default:
             return nil
         }
@@ -251,6 +299,8 @@ extension FilterViewController: UITableViewDataSource {
             isDifficultyExpanded.toggle()
         case 1:
             isTagsExpanded.toggle()
+        case 2:
+            isIngredientsExpanded.toggle()
         default:
             return
         }
@@ -298,6 +348,21 @@ extension FilterViewController: UITableViewDataSource {
             
             return cell
             
+        case 2:
+            cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+            
+            cell.textLabel?.text = nil
+            cell.detailTextLabel?.text = nil
+            cell.accessoryType = .none
+            
+            let ingredient = allIngredients[indexPath.row]
+            cell.textLabel?.text = ingredient
+            cell.textLabel?.font = .systemFont(ofSize: 17)
+            cell.accessoryType = selectedIngredients.contains(ingredient) ? .checkmark : .none
+            cell.selectionStyle = .default
+            
+            return cell
+            
         default:
             return cell
         }
@@ -314,6 +379,14 @@ extension FilterViewController: UITableViewDelegate {
                 selectedTags.remove(tag)
             } else {
                 selectedTags.insert(tag)
+            }
+            tableView.reloadRows(at: [indexPath], with: .none)
+        } else if indexPath.section == 2 && indexPath.row < allIngredients.count {
+            let ingredient = allIngredients[indexPath.row]
+            if selectedIngredients.contains(ingredient) {
+                selectedIngredients.remove(ingredient)
+            } else {
+                selectedIngredients.insert(ingredient)
             }
             tableView.reloadRows(at: [indexPath], with: .none)
         }

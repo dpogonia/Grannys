@@ -5,8 +5,6 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 27. Operation, OperationQueue
-
 import UIKit
 
 protocol UnsplashImageSearchViewControllerDelegate: AnyObject {
@@ -252,9 +250,6 @@ class UnsplashImageCell: UICollectionViewCell {
         
         let thumbnailURL = photo.urls.small
         
-        // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27. Operation, OperationQueue: Использование очереди загрузки изображений
-        // Организована очередь загрузки
-        // Очередь сделана в отдельном классе
         currentLoadOperation = ImageLoadQueueManager.shared.loadImage(urlString: thumbnailURL) { [weak self] result in
             guard let self = self else { return }
             

@@ -5,13 +5,8 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 30: Порождающие паттерны. Singleton.
-
 import Foundation
 
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ
-// TagsManager реализует паттерн Singleton для централизованного управления тегами рецептов
-// Обеспечивает единый источник правды для всех тегов в приложении
 class TagsManager {
     static let shared = TagsManager()
     

@@ -74,14 +74,22 @@ class CategoriesViewController: UIViewController {
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         titleLabel.textAlignment = .center
-        titleLabel.sizeToFit()
+        titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.minimumScaleFactor = 0.5
         
-        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 200, height: 44))
+        // Определяем доступную ширину для заголовка
+        let screenWidth = UIScreen.main.bounds.width
+        let backButtonSpace: CGFloat = 60 // пространство для кнопки назад
+        let rightButtonsSpace: CGFloat = 140 // пространство для 3 кнопок справа
+        let availableWidth = screenWidth - backButtonSpace - rightButtonsSpace - 32 // 32 для отступов
+        
+        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: max(availableWidth, 100), height: 44))
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(titleLabel)
         
         NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
             titleLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
         ])
         

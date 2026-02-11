@@ -5,8 +5,6 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 27: Operation, OperationQueue. Использование очереди загрузки изображений
-
 import UIKit
 
 class RecipeTableViewCell: UITableViewCell {
@@ -68,9 +66,6 @@ class RecipeTableViewCell: UITableViewCell {
             recipeImageView.image = image
             recipeImageView.backgroundColor = .clear
         } else if let imageURL = recipe.imageURL, !imageURL.isEmpty {
-            // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27: Operation, OperationQueue.
-            // Организована очередь загрузки
-            // Очередь сделана в отдельном классе
             currentLoadOperation = ImageLoadQueueManager.shared.loadImage(urlString: imageURL) { [weak self] result in
                 guard let self = self else { return }
                 

@@ -5,8 +5,6 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 32: Поведенческие паттерны. Observer.
-
 import UIKit
 
 class RecipesViewController: UIViewController {
@@ -22,6 +20,8 @@ class RecipesViewController: UIViewController {
     private var filterTags: Set<String> = []
     
     private var filterDifficulty: String?
+    
+    private var filterIngredients: Set<String> = []
     
     private lazy var tableView: UITableView = {
         let tableView = UITableView()
@@ -68,7 +68,7 @@ class RecipesViewController: UIViewController {
     
     private lazy var filterButton: UIBarButtonItem = {
         let button = UIBarButtonItem(
-            image: UIImage(systemName: "slider.horizontal.3"),
+            image: UIImage(systemName: "line.3.horizontal.decrease.circle"),
             style: .plain,
             target: self,
             action: #selector(didTapFilterButton)
@@ -168,6 +168,13 @@ class RecipesViewController: UIViewController {
         setupConstraints()
         setupNavigationBar()
     }
+
+    // Публичный метод для обновления списка рецептов
+    func reloadRecipes() {
+        loadCategories()
+        loadRecipes()
+        tableView.reloadData()
+    }
     
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
@@ -224,7 +231,7 @@ private extension RecipesViewController {
     
     func setupNavigationBar() {
         navigationItem.titleView = categoryButton
-        navigationItem.rightBarButtonItems = [addButton, filterButton, mealDBButton]
+        navigationItem.rightBarButtonItems = [addButton, mealDBButton, filterButton]
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
     }
@@ -232,7 +239,7 @@ private extension RecipesViewController {
     func loadCategories() {
         allCategories = RecipesRepository.shared.getAllCategories()
     }
-    
+
     func loadRecipes() {
         let favoriteCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")
         let archiveCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000002")
@@ -288,6 +295,19 @@ private extension RecipesViewController {
         if let difficulty = filterDifficulty {
             filtered = filtered.filter { recipe in
                 recipe.difficulty?.lowercased() == difficulty.lowercased()
+            }
+        }
+        
+        // Фильтрация по ингредиентам (AND логика - все выбранные ингредиенты должны присутствовать)
+        if !filterIngredients.isEmpty {
+            filtered = filtered.filter { recipe in
+                let recipeIngredients = recipe.ingredients.map { $0.name.lowercased() }
+                // Проверяем, что ВСЕ выбранные ингредиенты присутствуют в рецепте
+                return filterIngredients.allSatisfy { selectedIngredient in
+                    recipeIngredients.contains { recipeIngredient in
+                        recipeIngredient.contains(selectedIngredient.lowercased())
+                    }
+                }
             }
         }
         
@@ -607,9 +627,6 @@ extension RecipesViewController: CategoriesViewControllerDelegate {
     }
 }
 
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 32 ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ
-// OBSERVER: Реализация наблюдателя через Delegate
-// RecipesViewController подписан на изменения в RecipeEditViewController
 extension RecipesViewController: RecipeEditViewControllerDelegate {
     func didSaveRecipe() {
         // ПАТТЕРН OBSERVER: Реакция на уведомление о сохранении рецепта
@@ -636,9 +653,10 @@ extension RecipesViewController: CategoriesSelectionViewControllerDelegate {
 }
 
 extension RecipesViewController: FilterViewControllerDelegate {
-    func didApplyFilters(selectedTags: Set<String>, selectedDifficulty: String?) {
+    func didApplyFilters(selectedTags: Set<String>, selectedDifficulty: String?, selectedIngredients: Set<String>) {
         filterTags = selectedTags
         filterDifficulty = selectedDifficulty
+        filterIngredients = selectedIngredients
         loadRecipes()
     }
 }

@@ -14,30 +14,21 @@ class CategoryCollectionViewCell: UICollectionViewCell {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
         imageView.contentMode = .scaleAspectFit
-        imageView.tintColor = .systemBlue
+        imageView.tintColor = .label
         return imageView
     }()
     
     private let nameLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 14, weight: .medium)
+        label.font = .systemFont(ofSize: 12, weight: .medium)
         label.textColor = .label
         label.textAlignment = .center
         label.numberOfLines = 2
+        label.adjustsFontSizeToFitWidth = true
+        label.minimumScaleFactor = 0.7
+        label.lineBreakMode = .byTruncatingTail
         return label
-    }()
-    
-    private let containerView: UIView = {
-        let view = UIView()
-        view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .secondarySystemBackground
-        view.layer.cornerRadius = 12
-        view.layer.shadowColor = UIColor.black.cgColor
-        view.layer.shadowOffset = CGSize(width: 0, height: 2)
-        view.layer.shadowRadius = 4
-        view.layer.shadowOpacity = 0.1
-        return view
     }()
     
     override init(frame: CGRect) {
@@ -52,9 +43,11 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     
     override func prepareForReuse() {
         super.prepareForReuse()
-        iconImageView.image = nil
         nameLabel.text = nil
-        containerView.backgroundColor = .secondarySystemBackground
+        iconImageView.image = nil
+        contentView.backgroundColor = .secondarySystemBackground
+        nameLabel.textColor = .label
+        iconImageView.tintColor = .label
     }
     
     override var isSelected: Bool {
@@ -65,70 +58,88 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     
     func configure(with categoryName: String, isSelected: Bool = false) {
         nameLabel.text = categoryName
-        
-        let iconName = iconNameForCategory(categoryName)
-        iconImageView.image = UIImage(systemName: iconName)
-        
+        iconImageView.image = getIcon(for: categoryName)
         self.isSelected = isSelected
     }
     
-    private func iconNameForCategory(_ category: String) -> String {
-        let lowercased = category.lowercased()
+    func configureWithEmoji(with categoryName: String, emoji: String, isSelected: Bool = false) {
+        nameLabel.text = categoryName
+        iconImageView.image = getIcon(for: categoryName)
+        self.isSelected = isSelected
+    }
+    
+    private func getIcon(for categoryName: String) -> UIImage? {
+        let iconName: String
         
-        switch lowercased {
-        case "all recipes": return "square.grid.2x2"
-        case "beef", "lamb", "pork", "chicken", "goat": return "frying.pan"
-        case "dessert", "desserts": return "birthday.cake"
-        case "seafood": return "fish"
-        case "vegetarian", "vegan": return "leaf"
-        case "breakfast": return "cup.and.saucer"
-        case "side", "sides", "starter", "starters", "pasta": return "circle.grid.3x3"
-        case "miscellaneous": return "cooktop"
-        case "soup", "soups": return "cup.and.saucer"
-        case "salad", "salads": return "leaf.circle"
-        case "lunch": return "fork.knife"
-        case "dinner": return "moon.fill"
-        case "beverages", "beverage": return "cup.and.saucer.fill"
-        default: return "square.grid.2x2"
+        switch categoryName.lowercased() {
+        case "all recipes":
+            iconName = "list.bullet.rectangle"
+        case "breakfast":
+            iconName = "sunrise.fill"
+        case "dessert", "desserts":
+            iconName = "birthday.cake.fill"
+        case "main":
+            iconName = "fork.knife"
+        case "side":
+            iconName = "leaf.fill"
+        case "starter":
+            iconName = "sparkles"
+        case "vegan":
+            iconName = "leaf.circle.fill"
+        case "beverage", "beverages":
+            iconName = "cup.and.saucer.fill"
+        case "seafood":
+            iconName = "fish.fill"
+        case "lunch":
+            iconName = "sun.max.fill"
+        case "salad":
+            iconName = "carrot.fill"
+        case "miscellaneous":
+            iconName = "star.fill"
+        default:
+            iconName = "circle.fill"
         }
+        
+        return UIImage(systemName: iconName)
     }
     
     private func updateSelectionState() {
         if isSelected {
-            containerView.backgroundColor = .systemBlue.withAlphaComponent(0.2)
-            iconImageView.tintColor = .systemBlue
-            nameLabel.textColor = .systemBlue
-            containerView.layer.borderWidth = 2
-            containerView.layer.borderColor = UIColor.systemBlue.cgColor
+            contentView.backgroundColor = .systemBlue
+            nameLabel.textColor = .white
+            iconImageView.tintColor = .white
+            contentView.layer.borderColor = UIColor.systemBlue.cgColor
         } else {
-            containerView.backgroundColor = .secondarySystemBackground
-            iconImageView.tintColor = .label
+            contentView.backgroundColor = .secondarySystemBackground
             nameLabel.textColor = .label
-            containerView.layer.borderWidth = 0
-            containerView.layer.borderColor = nil
+            iconImageView.tintColor = .label
+            contentView.layer.borderColor = UIColor.systemGray4.cgColor
         }
     }
     
     private func setupUI() {
-        contentView.addSubview(containerView)
-        containerView.addSubview(iconImageView)
-        containerView.addSubview(nameLabel)
+        let stackView = UIStackView(arrangedSubviews: [iconImageView, nameLabel])
+        stackView.translatesAutoresizingMaskIntoConstraints = false
+        stackView.axis = .vertical
+        stackView.alignment = .center
+        stackView.spacing = 6
+        
+        contentView.addSubview(stackView)
+        contentView.layer.cornerRadius = 16
+        contentView.layer.borderWidth = 1
+        contentView.layer.borderColor = UIColor.systemGray4.cgColor
         
         NSLayoutConstraint.activate([
-            containerView.topAnchor.constraint(equalTo: contentView.topAnchor),
-            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
-            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
-            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor),
-            
-            iconImageView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 12),
-            iconImageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
             iconImageView.widthAnchor.constraint(equalToConstant: 32),
             iconImageView.heightAnchor.constraint(equalToConstant: 32),
             
-            nameLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 8),
-            nameLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
-            nameLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
-            nameLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -12)
+            nameLabel.leadingAnchor.constraint(equalTo: stackView.leadingAnchor, constant: 4),
+            nameLabel.trailingAnchor.constraint(equalTo: stackView.trailingAnchor, constant: -4),
+            
+            stackView.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+            stackView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            stackView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 4),
+            stackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -4)
         ])
     }
 }
