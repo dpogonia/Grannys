@@ -5,20 +5,13 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 27 Operation, OperationQueue.
-// ДЗ ТЕМА 30. Паттерн Singleton
-
 import UIKit
 import Foundation
 
 class ImageLoadQueueManager {
     
-    // ПАТТЕРН SINGLETON: Единственный экземпляр менеджера очереди загрузки изображений
     static let shared = ImageLoadQueueManager()
     
-    // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27 Operation, OperationQueue: Создать очередь загрузки изображений с использованием OperationQueue
-    // Менеджер очереди загрузки изображений, управляющий OperationQueue для загрузки изображений для ячеек таблицы/коллекции
-    // OperationQueue автоматически управляет выполнением операций в фоновых потоках
     private let loadQueue: OperationQueue
     
     private var activeOperations: [String: ImageLoadOperation] = [:]
@@ -26,21 +19,44 @@ class ImageLoadQueueManager {
     private let synchronizationQueue = DispatchQueue(label: "com.grannys.imageLoadQueue", attributes: .concurrent)
     
     private init() {
-        
-        // Организована очередь загрузки
-        // Создание OperationQueue для загрузки изображений
         loadQueue = OperationQueue()
         loadQueue.maxConcurrentOperationCount = 5
         loadQueue.name = "ImageLoadQueue"
         loadQueue.qualityOfService = .utility
+        
+        // Подписка на уведомление о нехватке памяти
+        NotificationCenter.default.addObserver(
+            self,
+            selector: #selector(handleMemoryWarning),
+            name: UIApplication.didReceiveMemoryWarningNotification,
+            object: nil
+        )
+        
+        print("🔄 ImageLoadQueueManager initialized")
+    }
+    
+    @objc private func handleMemoryWarning() {
+        print("⚠️ Memory warning received - suspending image load queue")
+        loadQueue.isSuspended = true
+        
+        // Отменяем все активные операции для освобождения памяти
+        cancelAllLoads()
+        
+        // Возобновляем очередь через 2 секунды
+        DispatchQueue.main.asyncAfter(deadline: .now() + 2.0) { [weak self] in
+            print("▶️ Resuming image load queue")
+            self?.loadQueue.isSuspended = false
+        }
+    }
+    
+    deinit {
+        NotificationCenter.default.removeObserver(self)
     }
     
     // Загружает изображение по URL
     @discardableResult
     func loadImage(urlString: String, completion: @escaping (Result<UIImage, Error>) -> Void) -> Operation? {
         
-        // Реализовано кэширование
-        // Проверка кэша перед созданием операции
         if let cachedImage = ImageCache.shared.image(for: urlString) {
             DispatchQueue.main.async {
                 completion(.success(cachedImage))
@@ -53,8 +69,6 @@ class ImageLoadQueueManager {
                 return existingOperation
             }
             
-            // Очередь сделана в отдельном классе
-            // ImageLoadOperation - отдельный класс для загрузки одного изображения
             let operation = ImageLoadOperation(urlString: urlString) { [weak self] result in
                 self?.synchronizationQueue.async(flags: .barrier) {
                     self?.activeOperations.removeValue(forKey: urlString)
@@ -67,8 +81,6 @@ class ImageLoadQueueManager {
             
             activeOperations[urlString] = operation
             
-            // Организована очередь загрузки
-            // Добавление операции в OperationQueue
             loadQueue.addOperation(operation)
             
             return operation
@@ -86,10 +98,20 @@ class ImageLoadQueueManager {
     
     func cancelAllLoads() {
         synchronizationQueue.async(flags: .barrier) {
+            let count = self.activeOperations.count
+            print("🚫 Cancelling \(count) active image load operations")
+            
             for operation in self.activeOperations.values {
                 operation.cancel()
             }
             self.activeOperations.removeAll()
+        }
+    }
+    
+    // Получение статистики очереди
+    func getQueueStatistics() -> (activeOperations: Int, queuedOperations: Int) {
+        return synchronizationQueue.sync {
+            return (activeOperations.count, loadQueue.operationCount)
         }
     }
 }

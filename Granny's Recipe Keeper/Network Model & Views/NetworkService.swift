@@ -5,42 +5,26 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 25 Codable.
-// ДЗ ТЕМА 30: Порождающие паттерны. Singleton.
-
 import Foundation
 
-/// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 25 Codable, API: Сетевой слой с использованием API
-/// Класс NetworkService представляет собой отдельную сущность для работы с сетью, используя URLSession
 class NetworkService {
     
-    // ПАТТЕРН SINGLETON: Единственный экземпляр сетевого сервиса
     static let shared = NetworkService()
     
     private let session: URLSession
     
-    // Использование Codable
-    // JSONDecoder используется для декодирования JSON в Swift объекты (Codable)
     private let decoder: JSONDecoder
     
     private init() {
-        
-        // Реализован сетевой слой в отдельной сущности
-        // Использование URLSession для реализации сетевого слоя
         let configuration = URLSessionConfiguration.default
         configuration.timeoutIntervalForRequest = 30
         configuration.timeoutIntervalForResource = 60
         self.session = URLSession(configuration: configuration)
         
-        // JSONDecoder для декодирования JSON в Swift объекты
-        // JSONEncoder для кодирования Swift объектов в JSON
         self.decoder = JSONDecoder()
         decoder.keyDecodingStrategy = .convertFromSnakeCase
     }
     
-    // Поддерживается общая обработка результатов/ошибок от API
-    // Метод обеспечивает централизованную обработку всех сетевых ошибок и результатов
-    // Использование URLSession.dataTask для выполнения сетевых запросов
     func performRequest<T: Codable>(
         _ request: URLRequest,
         responseType: T.Type,
@@ -48,15 +32,12 @@ class NetworkService {
     ) {
         session.dataTask(with: request) { [weak self] data, response, error in
             
-            // Поддерживается общая обработка результатов/ошибок от АПИ
-            // Обработка сетевых ошибок (нет интернета, таймаут и т.д.)
             if let error = error {
                 let networkError = self?.mapToNetworkError(error: error, response: response)
                 completion(.failure(networkError ?? .unknown))
                 return
             }
             
-            // Проверка HTTP ответа и статус кода
             guard let httpResponse = response as? HTTPURLResponse else {
                 completion(.failure(.invalidResponse))
                 return
@@ -73,7 +54,6 @@ class NetworkService {
                 return
             }
             
-            // Десериализация данных (преобразование JSON в наши структуры) с использованием Codable
             do {
                 let decodedObject = try self?.decoder.decode(T.self, from: data)
                 if let decodedObject = decodedObject {
@@ -92,7 +72,6 @@ class NetworkService {
         }.resume()
     }
     
-    // Реализованы 3 метода получения/отправки данных из АПИ. Выполняет GET запрос.
     func get<T: Codable>(
         url: URL,
         headers: [String: String]? = nil,
@@ -111,7 +90,6 @@ class NetworkService {
         performRequest(request, responseType: responseType, completion: completion)
     }
     
-    // Выполняет POST запрос
     func post<T: Codable, B: Codable>(
         url: URL,
         body: B,
@@ -183,9 +161,6 @@ class NetworkService {
     }
 }
 
-// NetworkError
-// Поддерживается общая обработка результатов/ошибок от АПИ
-// Этот enum обеспечивает централизованную обработку всех типов сетевых ошибок
 enum NetworkError: LocalizedError {
     case noConnection
     case timeout

@@ -5,35 +5,26 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 25 CODABLE. Сервис для работы с TheMealDB API.
-// ДЗ ТЕМА 30: Порождающие паттерны. Singleton.
+// ДЗ Moya
 
 import Foundation
 
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 25 CODABLE: Сервис для работы с TheMealDB API
-
 class TheMealDBService {
     
-    // ПАТТЕРН SINGLETON: Единственный экземпляр сервиса для работы с TheMealDB API
     static let shared = TheMealDBService()
     
     private let baseURL = "https://www.themealdb.com/api/json/v1/1"
     
-    // Реализован сетевой слой в отдельной сущности
     private let networkService = NetworkService.shared
     
     private init() {}
     
-    // API методы
-    
-    // Метод 1: Получение случайного рецепта из TheMealDB API
     func getRandomRecipe(completion: @escaping (Result<TheMealDBRecipe, NetworkError>) -> Void) {
         guard let url = URL(string: "\(baseURL)/random.php") else {
             completion(.failure(.invalidResponse))
             return
         }
         
-        // Поддерживается общая обработка результатов/ошибок от АПИ
         networkService.get(url: url, responseType: TheMealDBRandomResponse.self) { result in
             switch result {
             case .success(let response):
@@ -48,7 +39,6 @@ class TheMealDBService {
         }
     }
     
-    // Метод 2: Поиск рецептов по названию в TheMealDB API
     func searchRecipesByName(_ name: String, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
         guard let encodedName = name.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseURL)/search.php?s=\(encodedName)") else {
@@ -67,7 +57,6 @@ class TheMealDBService {
         }
     }
     
-    // Метод 3: Получение рецептов по категории из TheMealDB API
     func getRecipesByCategory(_ category: String, offset: Int = 0, limit: Int = 10, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
         guard let encodedCategory = category.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseURL)/filter.php?c=\(encodedCategory)") else {
@@ -75,7 +64,6 @@ class TheMealDBService {
             return
         }
         
-        // Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
         networkService.get(url: url, responseType: TheMealDBFilterResponse.self) { [weak self] result in
             switch result {
             case .success(let filterResponse):
@@ -100,7 +88,6 @@ class TheMealDBService {
         }
     }
     
-    // Поддерживается общая обработка результатов/ошибок от АПИ - 20 баллов
     func getRecipeById(_ id: String, completion: @escaping (Result<TheMealDBRecipe, NetworkError>) -> Void) {
         guard let encodedId = id.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
               let url = URL(string: "\(baseURL)/lookup.php?i=\(encodedId)") else {
@@ -122,7 +109,6 @@ class TheMealDBService {
         }
     }
     
-    // Метод 4: Получение списка категорий из TheMealDB API
     func getCategories(completion: @escaping (Result<[TheMealDBCategory], NetworkError>) -> Void) {
         guard let url = URL(string: "\(baseURL)/list.php?c=list") else {
             completion(.failure(.invalidResponse))
@@ -134,6 +120,104 @@ class TheMealDBService {
             case .success(let response):
                 let categories = response.meals ?? []
                 completion(.success(categories))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    // Получение списка областей (стран) из TheMealDB API
+    func getAreas(completion: @escaping (Result<[TheMealDBArea], NetworkError>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/list.php?a=list") else {
+            completion(.failure(.invalidResponse))
+            return
+        }
+        
+        networkService.get(url: url, responseType: TheMealDBAreas.self) { result in
+            switch result {
+            case .success(let response):
+                let areas = response.meals ?? []
+                completion(.success(areas))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    // Получение рецептов по области (стране)
+    func getRecipesByArea(_ area: String, offset: Int = 0, limit: Int = 10, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
+        guard let encodedArea = area.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/filter.php?a=\(encodedArea)") else {
+            completion(.failure(.invalidResponse))
+            return
+        }
+        
+        networkService.get(url: url, responseType: TheMealDBFilterResponse.self) { [weak self] result in
+            switch result {
+            case .success(let filterResponse):
+                let mealIds = filterResponse.meals?.compactMap { $0.idMeal } ?? []
+                
+                if mealIds.isEmpty {
+                    completion(.success([]))
+                    return
+                }
+                
+                let endIndex = min(offset + limit, mealIds.count)
+                guard offset < mealIds.count else {
+                    completion(.success([]))
+                    return
+                }
+                let paginatedIds = Array(mealIds[offset..<endIndex])
+                self?.fetchRecipesDetails(ids: paginatedIds, completion: completion)
+                
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func getIngredients(completion: @escaping (Result<[TheMealDBIngredient], NetworkError>) -> Void) {
+        guard let url = URL(string: "\(baseURL)/list.php?i=list") else {
+            completion(.failure(.invalidResponse))
+            return
+        }
+        
+        networkService.get(url: url, responseType: TheMealDBIngredientsResponse.self) { result in
+            switch result {
+            case .success(let response):
+                let ingredients = response.meals ?? []
+                completion(.success(ingredients))
+            case .failure(let error):
+                completion(.failure(error))
+            }
+        }
+    }
+    
+    func getRecipesByIngredient(_ ingredient: String, offset: Int = 0, limit: Int = 10, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void) {
+        guard let encodedIngredient = ingredient.addingPercentEncoding(withAllowedCharacters: .urlQueryAllowed),
+              let url = URL(string: "\(baseURL)/filter.php?i=\(encodedIngredient)") else {
+            completion(.failure(.invalidResponse))
+            return
+        }
+        
+        networkService.get(url: url, responseType: TheMealDBFilterResponse.self) { [weak self] result in
+            switch result {
+            case .success(let filterResponse):
+                let mealIds = filterResponse.meals?.compactMap { $0.idMeal } ?? []
+                
+                if mealIds.isEmpty {
+                    completion(.success([]))
+                    return
+                }
+                
+                let endIndex = min(offset + limit, mealIds.count)
+                guard offset < mealIds.count else {
+                    completion(.success([]))
+                    return
+                }
+                let paginatedIds = Array(mealIds[offset..<endIndex])
+                self?.fetchRecipesDetails(ids: paginatedIds, completion: completion)
+                
             case .failure(let error):
                 completion(.failure(error))
             }
@@ -167,7 +251,6 @@ class TheMealDBService {
         }
     }
     
-    // Преобразование
     func convertToAPIRecipe(_ mealDBRecipe: TheMealDBRecipe) -> APIRecipe {
         var ingredients: [APIIngredient] = []
         
@@ -243,7 +326,6 @@ class TheMealDBService {
     }
 }
 
-// TheMealDB Codable модели
 struct TheMealDBRecipe: Codable {
     let idMeal: String?
     let strMeal: String?
@@ -328,4 +410,25 @@ struct TheMealDBCategoriesResponse: Codable {
 
 struct TheMealDBCategory: Codable {
     let strCategory: String?
+}
+
+// Модели для областей (стран)
+struct TheMealDBAreas: Codable {
+    let meals: [TheMealDBArea]?
+}
+
+struct TheMealDBArea: Codable {
+    let strArea: String?
+}
+
+// Модели для ингредиентов
+struct TheMealDBIngredientsResponse: Codable {
+    let meals: [TheMealDBIngredient]?
+}
+
+struct TheMealDBIngredient: Codable {
+    let idIngredient: String?
+    let strIngredient: String?
+    let strDescription: String?
+    let strType: String?
 }

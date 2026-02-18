@@ -5,26 +5,9 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 27 Operation, OperationQueue.
-// ДЗ ТЕМА 32: ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ - Command.
-
 import UIKit
 import Foundation
 
-// MARK: - ImageLoadOperation
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27 Operation, OperationQueue: Создать очередь загрузки изображений с использованием OperationQueue
-// Организована очередь загрузки - 50 баллов
-// Очередь сделана в отдельном классе - 20 баллов
-// Реализовано кэширование - 30 баллов
-
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 32: ПОВЕДЕНЧЕСКИЕ ПАТТЕРНЫ
-// ПАТТЕРН : COMMAND (КОМАНДА). Инкапсулирует запрос как объект, позволяя параметризовать клиентов с разными запросами, ставить запросы в очередь, логировать их и поддерживать отмену операций. ImageLoadOperation инкапсулирует команду загрузки изображения
-// - Запрос (загрузка изображения) представлен как объект Operation
-// - Команды могут быть поставлены в очередь (через OperationQueue)
-// - Команды могут быть отменены (cancel())
-// - Изоляция кода выполнения запроса от кода, который инициирует запрос
-
-// Операция для загрузки одного изображения
 class ImageLoadOperation: Operation {
     private let urlString: String
     private var completion: ((Result<UIImage, Error>) -> Void)?
@@ -67,8 +50,6 @@ class ImageLoadOperation: Operation {
         super.init()
     }
     
-    // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27 Operation, OperationQueue: Организована очередь загрузки.
-    // Главный метод операции, который выполняется при запуске
     override func main() {
         if isCancelled {
             finish()
@@ -77,7 +58,6 @@ class ImageLoadOperation: Operation {
         
         _isExecuting = true
         
-        // Проверка кэша перед загрузкой из интернета
         if let cachedImage = ImageCache.shared.image(for: urlString) {
             loadedImage = cachedImage
             finish()
@@ -85,32 +65,46 @@ class ImageLoadOperation: Operation {
         }
         
         guard let url = URL(string: urlString) else {
-            loadError = NSError(domain: "Invalid URL", code: -1, userInfo: nil)
+            loadError = ImageLoadError.invalidURL
+            print("❌ Invalid URL: \(urlString)")
             finish()
             return
         }
         
         let task = URLSession.shared.dataTask(with: url) { [weak self] data, response, error in
-            guard let self = self, !self.isCancelled else {
+            guard let self = self else { return }
+            
+            if self.isCancelled {
+                self.loadError = ImageLoadError.cancelled
+                self.finish()
                 return
             }
             
             if let error = error {
-                self.loadError = error
+                self.loadError = ImageLoadError.networkError(error)
+                print("❌ Network error loading image: \(error.localizedDescription)")
                 self.finish()
                 return
             }
             
-            guard let data = data, let image = UIImage(data: data) else {
-                self.loadError = NSError(domain: "Invalid image data", code: -1, userInfo: nil)
+            guard let data = data else {
+                self.loadError = ImageLoadError.invalidData
+                print("❌ No data received for image")
                 self.finish()
                 return
             }
             
-            // Сохранение изображения в кэш для будущего использования
+            guard let image = UIImage(data: data) else {
+                self.loadError = ImageLoadError.decodingFailed
+                print("❌ Failed to decode image from data")
+                self.finish()
+                return
+            }
+            
             ImageCache.shared.setImage(image, for: self.urlString)
             
             self.loadedImage = image
+            print("✅ Image loaded successfully")
             self.finish()
         }
         
@@ -125,20 +119,20 @@ class ImageLoadOperation: Operation {
             completion?(.success(image))
         } else if let error = loadError {
             completion?(.failure(error))
+        } else if isCancelled {
+            completion?(.failure(ImageLoadError.cancelled))
         } else {
-            completion?(.failure(NSError(domain: "Unknown error", code: -1, userInfo: nil)))
+            completion?(.failure(ImageLoadError.invalidData))
         }
         
         completion = nil
     }
     
-    // ДЗ ТЕМА 32. Поведенческие паттерны.
-    // ПАТТЕРН COMMAND: Отмена команды
-    // Одно из преимуществ паттерна Command - возможность отменить выполнение команды
     override func cancel() {
         super.cancel()
         if !isFinished {
-            loadError = NSError(domain: "Operation cancelled", code: -1, userInfo: nil)
+            loadError = ImageLoadError.cancelled
+            print("🚫 Image load cancelled: \(urlString)")
             finish()
         }
     }

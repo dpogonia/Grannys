@@ -5,48 +5,17 @@
 //  Created by Dmitrii Pogonia on 26.01.2026.
 //
 
-// ДЗ ТЕМА 31: Структурные паттерны. Адаптер.
-
 import Foundation
 import UIKit
 
-// MARK: - ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 31: СТРУКТУРНЫЕ ПАТТЕРНЫ
-// ПАТТЕРН 2: ADAPTER (АДАПТЕР)
-// Описание: Адаптер - структурный паттерн, который позволяет объектам с несовместимыми интерфейсами
-//          работать вместе. Адаптер оборачивает объект и предоставляет ему новый интерфейс.
-// В приложении используются разные источники данных о рецептах:
-//          - TheMealDB API (возвращает TheMealDBRecipe)
-//          - Generic Recipe API (возвращает APIRecipe)
-//          - Каждое API имеет свою структуру данных
-//          - Приложение работает с единой моделью Recipe
-//
-// Создаю адаптеры, которые преобразуют данные из разных API в единый формат Recipe
-//          1. RecipeAdapter - протокол для всех адаптеров
-//          2. TheMealDBRecipeAdapter - адаптер для TheMealDB API
-//          3. GenericRecipeAdapter - адаптер для Generic Recipe API
-//          - Единый интерфейс для работы с разными источниками данных
-//          - Легко добавлять новые источники данных (новый адаптер)
-//          - Разделение логики преобразования данных
-//          - Соответствие Single Responsibility Principle
-
-
-/// ПАТТЕРН ADAPTER: Протокол для всех адаптеров рецептов определяет единый интерфейс для преобразования данных из разных источников в Recipe
 protocol RecipeAdapter {
-    /// Преобразует данные из источника в объект Recipe
     func adapt() -> Recipe
     
-    /// Преобразует данные из источника в объект Recipe с дополнительными категориями
     func adapt(with categories: [Category]) -> Recipe
 }
 
-// MARK: - TheMealDBRecipeAdapter
-
-// ПАТТЕРН ADAPTER: Адаптер для преобразования TheMealDBRecipe в Recipe
-// TheMealDB API возвращает данные в специфичном формате (strMeal, strInstructions, strIngredient)
-// Этот адаптер преобразует их в единый формат Recipe приложения
 class TheMealDBRecipeAdapter: RecipeAdapter {
     
-    // ПАТТЕРН ADAPTER: Адаптируемый объект
     private let mealDBRecipe: TheMealDBRecipe
     
     
@@ -60,7 +29,6 @@ class TheMealDBRecipeAdapter: RecipeAdapter {
         return adapt(with: [])
     }
     
-    // ПАТТЕРН ADAPTER: Основной метод адаптации с категориями. Преобразует сложную структуру TheMealDB (20 полей для ингредиентов) в простой массив
     func adapt(with categories: [Category]) -> Recipe {
         // Преобразование инструкций
         let instructions = mealDBRecipe.strInstructions
@@ -83,7 +51,6 @@ class TheMealDBRecipeAdapter: RecipeAdapter {
     
     // MARK: - Private Helper Methods
     
-    // ПАТТЕРН ADAPTER: Извлечение ингредиентов из 20 полей API
     // Адаптер преобразует ингредиенты в массив Ingredient
     private func extractIngredients() -> [Ingredient] {
         var ingredients: [Ingredient] = []
@@ -125,7 +92,6 @@ class TheMealDBRecipeAdapter: RecipeAdapter {
         return ingredients
     }
     
-    // ПАТТЕРН ADAPTER: Извлечение тегов из строки с разделителями
     // TheMealDB возвращает теги как строку "Dessert,Sweet,Baking"
     // Адаптер преобразует их в массив ["Dessert", "Sweet", "Baking"]
     private func extractTags() -> [String] {
@@ -145,7 +111,6 @@ class TheMealDBRecipeAdapter: RecipeAdapter {
 // Этот адаптер преобразует их в единый формат Recipe приложения
 class GenericRecipeAdapter: RecipeAdapter {
     
-    // ПАТТЕРН ADAPTER: Адаптируемый объект
     private let apiRecipe: APIRecipe
     
     // Инициализатор адаптера
@@ -153,12 +118,10 @@ class GenericRecipeAdapter: RecipeAdapter {
         self.apiRecipe = apiRecipe
     }
     
-    // ПАТТЕРН ADAPTER: Метод адаптации без категорий
     func adapt() -> Recipe {
         return adapt(with: [])
     }
     
-    // ПАТТЕРН ADAPTER: Основной метод адаптации с категориями
     // Преобразует структуру APIRecipe в Recipe
     func adapt(with categories: [Category]) -> Recipe {
         let instructions = apiRecipe.instructions ?? apiRecipe.summary ?? ""
@@ -180,7 +143,6 @@ class GenericRecipeAdapter: RecipeAdapter {
             .build()
     }
     
-    // ПАТТЕРН ADAPTER: Преобразование ингредиентов из API формата в формат приложения
     // APIIngredient имеет поля amount (Double) и unit (String)
     // Ingredient имеет поле amount (String)
     // Адаптер объединяет amount и unit в одну строку
@@ -213,13 +175,11 @@ class GenericRecipeAdapter: RecipeAdapter {
 // Упрощает создание правильного адаптера в зависимости от типа данных
 class RecipeAdapterFactory {
     
-    // ПАТТЕРН ADAPTER: Создание адаптера для TheMealDB рецепта
     // Адаптер для преобразования в Recipe
     static func makeAdapter(from mealDBRecipe: TheMealDBRecipe) -> RecipeAdapter {
         return TheMealDBRecipeAdapter(mealDBRecipe: mealDBRecipe)
     }
     
-    // ПАТТЕРН ADAPTER: Создание адаптера для Generic рецепта
     // apiRecipe: Рецепт из Generic API
     // Адаптер для преобразования в Recipe
     static func makeAdapter(from apiRecipe: APIRecipe) -> RecipeAdapter {

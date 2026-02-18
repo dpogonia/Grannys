@@ -5,12 +5,8 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ. Builder. Prototype.
-
 import UIKit
 import CoreData
-
-// MARK: - Recipe
 
 struct Recipe {
     let id: UUID
@@ -262,14 +258,9 @@ extension Category {
 }
 
 // MARK: - Recipe Builder
-// ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ
-// ПАТТЕРН 2: BUILDER (СТРОИТЕЛЬ)
-// Описание: RecipeBuilder реализует паттерн Builder для пошагового создания сложного объекта Recipe
-// Recipe имеет 13 параметров (name, instructions, imageData, ingredients, categories и т.д.). Builder позволяет создавать Recipe пошагово, устанавливая только нужные поля
 
 class RecipeBuilder {
     
-    // ПАТТЕРН BUILDER: Промежуточное состояние объекта, который строится
     private var id: UUID = UUID()
     private var name: String
     private var recipeInstructions: String?
@@ -286,15 +277,10 @@ class RecipeBuilder {
     private var calories: Int?
     private var tags: [String] = []
     
-    // ПАТТЕРН BUILDER: Инициализатор принимает только обязательные параметры
-    // В случае Recipe единственный обязательный параметр - это название (name)
     init(name: String) {
         self.name = name
     }
     
-    // ПАТТЕРН BUILDER: Методы для установки опциональных параметров
-    // Каждый метод возвращает self для реализации цепочки вызовов
-    // Установить инструкции по приготовлению
     func with(instructions: String) -> RecipeBuilder {
         self.recipeInstructions = instructions
         return self
@@ -360,15 +346,12 @@ class RecipeBuilder {
         return self
     }
     
-    // ПАТТЕРН BUILDER: Методы для добавления элементов в коллекции
     
-    // Добавить ингредиент
     func addIngredient(_ ingredient: Ingredient) -> RecipeBuilder {
         self.ingredients.append(ingredient)
         return self
     }
     
-    // Добавить ингредиент по имени и количеству
     func addIngredient(name: String, amount: String? = nil) -> RecipeBuilder {
         let ingredient = Ingredient(name: name, amount: amount)
         self.ingredients.append(ingredient)
@@ -409,7 +392,6 @@ class RecipeBuilder {
         return self
     }
     
-    // ПАТТЕРН BUILDER: Метод build() создаёт финальный объект Recipe. Это финальный шаг, который собирает все установленные значения в один объект
     func build() -> Recipe {
         return Recipe(
             id: id,
@@ -432,7 +414,6 @@ class RecipeBuilder {
 }
 
 extension Recipe {
-    // ДЗ ТЕМА 30: ПОРОЖДАЮЩИЕ ПАТТЕРНЫ. Prototype.
     // Паттерн Prototype позволяет создавать копии существующих объектов без привязки к их конкретным классам. Метод Recipe.builder(from: recipe) принимает существующий рецепт. Создает новый Builder с копией всех свойств оригинального рецепта. Позволяет дальше изменить любые свойства через fluent interface. Финальный вызов .build() создаст новый Recipe.
     static func builder(from recipe: Recipe) -> RecipeBuilder {
         return RecipeBuilder(name: recipe.name)

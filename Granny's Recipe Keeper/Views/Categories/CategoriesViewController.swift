@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol CategoriesViewControllerDelegate: AnyObject {
-    func didSelectCategory(_ category: Category?)
-}
-
 class CategoriesViewController: UIViewController {
     
     weak var delegate: CategoriesViewControllerDelegate?
@@ -49,10 +45,9 @@ class CategoriesViewController: UIViewController {
         case specialCategories = 3
     }
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
         return tableView
     }()
     
@@ -66,6 +61,14 @@ class CategoriesViewController: UIViewController {
         setupNavigationBar()
     }
     
+    private func setupTableView() {
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
+        tableView.dataSource = self
+        tableView.delegate = self
+        view.addSubview(tableView)
+    }
+    
+    
     private func setupView() {
         view.backgroundColor = .systemBackground
         
@@ -74,14 +77,22 @@ class CategoriesViewController: UIViewController {
         titleLabel.font = .systemFont(ofSize: 17, weight: .semibold)
         titleLabel.textColor = .label
         titleLabel.textAlignment = .center
-        titleLabel.sizeToFit()
+        titleLabel.adjustsFontSizeToFitWidth = true
+        titleLabel.minimumScaleFactor = 0.5
         
-        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: 200, height: 44))
+        // Определяем доступную ширину для заголовка
+        let screenWidth = UIScreen.main.bounds.width
+        let backButtonSpace: CGFloat = 60 // пространство для кнопки назад
+        let rightButtonsSpace: CGFloat = 140 // пространство для 3 кнопок справа
+        let availableWidth = screenWidth - backButtonSpace - rightButtonsSpace - 32 // 32 для отступов
+        
+        let containerView = UIView(frame: CGRect(x: 0, y: 0, width: max(availableWidth, 100), height: 44))
         titleLabel.translatesAutoresizingMaskIntoConstraints = false
         containerView.addSubview(titleLabel)
         
         NSLayoutConstraint.activate([
-            titleLabel.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 8),
+            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -8),
             titleLabel.centerYAnchor.constraint(equalTo: containerView.centerYAnchor)
         ])
         
@@ -230,7 +241,7 @@ class CategoriesViewController: UIViewController {
         }
     }
     
-    private func setupTableView() {
+    private func setupTableViewConstraints() {
         view.addSubview(tableView)
         tableView.dataSource = self
         tableView.delegate = self

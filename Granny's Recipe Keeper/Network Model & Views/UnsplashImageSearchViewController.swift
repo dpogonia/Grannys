@@ -5,13 +5,7 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
-// ДЗ ТЕМА 27. Operation, OperationQueue
-
 import UIKit
-
-protocol UnsplashImageSearchViewControllerDelegate: AnyObject {
-    func didSelectImage(image: UIImage, imageURL: String)
-}
 
 class UnsplashImageSearchViewController: UIViewController {
     
@@ -26,7 +20,7 @@ class UnsplashImageSearchViewController: UIViewController {
         return searchBar
     }()
     
-    private lazy var collectionView: UICollectionView = {
+    private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
         layout.minimumInteritemSpacing = 8
@@ -36,7 +30,6 @@ class UnsplashImageSearchViewController: UIViewController {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemBackground
-        collectionView.register(UnsplashImageCell.self, forCellWithReuseIdentifier: "UnsplashImageCell")
         return collectionView
     }()
     
@@ -110,6 +103,7 @@ class UnsplashImageSearchViewController: UIViewController {
     }
     
     private func setupCollectionView() {
+        collectionView.register(UnsplashImageCell.self, forCellWithReuseIdentifier: "UnsplashImageCell")
         collectionView.dataSource = self
         collectionView.delegate = self
     }
@@ -252,9 +246,6 @@ class UnsplashImageCell: UICollectionViewCell {
         
         let thumbnailURL = photo.urls.small
         
-        // ДОМАШНЕЕ ЗАДАНИЕ ТЕМА 27. Operation, OperationQueue: Использование очереди загрузки изображений
-        // Организована очередь загрузки
-        // Очередь сделана в отдельном классе
         currentLoadOperation = ImageLoadQueueManager.shared.loadImage(urlString: thumbnailURL) { [weak self] result in
             guard let self = self else { return }
             
