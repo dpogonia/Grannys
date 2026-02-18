@@ -40,7 +40,8 @@ class TheMealDBViewController: UIViewController {
         
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
-        collectionView.backgroundColor = .systemBackground
+        // Делаем фон прозрачным, чтобы совпадал с основным фоном экрана
+        collectionView.backgroundColor = .clear
         collectionView.showsHorizontalScrollIndicator = false
         return collectionView
     }()
@@ -94,6 +95,8 @@ class TheMealDBViewController: UIViewController {
     private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
+        // Прозрачный фон, чтобы подложка была единой с фоном view
+        tableView.backgroundColor = .clear
         return tableView
     }()
     
@@ -122,6 +125,12 @@ class TheMealDBViewController: UIViewController {
     
     private let backButton: UIBarButtonItem = {
         return UIBarButtonItem(image: UIImage(systemName: "chevron.left"), style: .plain, target: nil, action: nil)
+    }()
+    
+    private let languageButton: UIBarButtonItem = {
+        let item = UIBarButtonItem(image: UIImage(systemName: "character.book.closed"), style: .plain, target: nil, action: nil)
+        item.accessibilityLabel = "Recipe language"
+        return item
     }()
     
     // Object lifecycle
@@ -182,6 +191,33 @@ class TheMealDBViewController: UIViewController {
         interactor?.loadRecipes(request: loadRecipesRequest)
     }
     
+    override func viewWillAppear(_ animated: Bool) {
+        super.viewWillAppear(animated)
+        
+        // Делаем фон под навбаром таким же, как и у остального экрана
+        let backgroundColor: UIColor = .systemBackground
+        view.backgroundColor = backgroundColor
+        
+        guard let navController = navigationController else { return }
+        navController.view.backgroundColor = backgroundColor
+        
+        if #available(iOS 15.0, *) {
+            let appearance = UINavigationBarAppearance()
+            appearance.configureWithOpaqueBackground()
+            appearance.backgroundColor = backgroundColor
+            appearance.shadowColor = .clear
+            
+            navController.navigationBar.standardAppearance = appearance
+            navController.navigationBar.scrollEdgeAppearance = appearance
+            navController.navigationBar.compactAppearance = appearance
+        } else {
+            navController.navigationBar.isTranslucent = false
+            navController.navigationBar.barTintColor = backgroundColor
+            navController.navigationBar.shadowImage = UIImage()
+            navController.navigationBar.setBackgroundImage(UIImage(), for: .default)
+        }
+    }
+    
     // Actions
     
     @objc private func didTapRandomButton() {
@@ -209,11 +245,40 @@ class TheMealDBViewController: UIViewController {
         router?.routeBack()
     }
     
+    @objc private func didTapLanguageButton() {
+        let current = TranslationSettings.shared.preferredLanguage
+        
+        let alert = UIAlertController(
+            title: "Recipe Language",
+            message: "Select language for recipe translations",
+            preferredStyle: .actionSheet
+        )
+        
+        for language in AppLanguage.allCases {
+            let title = language.displayName + (language == current ? " ✓" : "")
+            let action = UIAlertAction(title: title, style: .default) { _ in
+                TranslationSettings.shared.preferredLanguage = language
+            }
+            alert.addAction(action)
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        if let popover = alert.popoverPresentationController {
+            popover.barButtonItem = languageButton
+        }
+        
+        present(alert, animated: true)
+    }
+    
     @objc private func refreshData() {
         guard let dataStore = router?.dataStore else { return }
         
+        // Обновляем рецепты с теми же фильтрами, которые были применены до pull-to-refresh
         let filterType: LoadRecipes.Request.FilterType
-        if let category = dataStore.selectedCategory {
+        if let lastFilter = dataStore.lastFilterType {
+            filterType = lastFilter
+        } else if let category = dataStore.selectedCategory {
             filterType = .category(category)
         } else {
             filterType = .random
@@ -253,7 +318,7 @@ class TheMealDBViewController: UIViewController {
     private func setupNavigationBar() {
         setupBarButtons()
         navigationItem.leftBarButtonItem = backButton
-        navigationItem.rightBarButtonItems = [randomButton, searchButton, filterButton]
+        navigationItem.rightBarButtonItems = [randomButton, searchButton, filterButton, languageButton]
     }
     
     private func setupBarButtons() {
@@ -265,6 +330,8 @@ class TheMealDBViewController: UIViewController {
         filterButton.action = #selector(didTapFilterButton)
         backButton.target = self
         backButton.action = #selector(didTapBack)
+        languageButton.target = self
+        languageButton.action = #selector(didTapLanguageButton)
         refreshControl.addTarget(self, action: #selector(refreshData), for: .valueChanged)
     }
     
@@ -310,7 +377,7 @@ class TheMealDBViewController: UIViewController {
         view.addSubview(activityIndicator)
         
         NSLayoutConstraint.activate([
-            categoriesCollectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor),
+            categoriesCollectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             categoriesCollectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             categoriesCollectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
             categoriesCollectionView.heightAnchor.constraint(equalToConstant: 100),
@@ -429,7 +496,9 @@ extension TheMealDBViewController: UITableViewDelegate {
             guard let dataStore = router?.dataStore else { return }
             
             let filterType: LoadRecipes.Request.FilterType
-            if let category = dataStore.selectedCategory {
+            if let lastFilter = dataStore.lastFilterType {
+                filterType = lastFilter
+            } else if let category = dataStore.selectedCategory {
                 filterType = .category(category)
             } else {
                 filterType = .random

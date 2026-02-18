@@ -45,9 +45,7 @@ class CategoryCollectionViewCell: UICollectionViewCell {
         super.prepareForReuse()
         nameLabel.text = nil
         iconImageView.image = nil
-        contentView.backgroundColor = .secondarySystemBackground
-        nameLabel.textColor = .label
-        iconImageView.tintColor = .label
+        applyUnselectedStyle()
     }
     
     override var isSelected: Bool {
@@ -105,15 +103,9 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     
     private func updateSelectionState() {
         if isSelected {
-            contentView.backgroundColor = .systemBlue
-            nameLabel.textColor = .white
-            iconImageView.tintColor = .white
-            contentView.layer.borderColor = UIColor.systemBlue.cgColor
+            applySelectedStyle()
         } else {
-            contentView.backgroundColor = .secondarySystemBackground
-            nameLabel.textColor = .label
-            iconImageView.tintColor = .label
-            contentView.layer.borderColor = UIColor.systemGray4.cgColor
+            applyUnselectedStyle()
         }
     }
     
@@ -128,6 +120,7 @@ class CategoryCollectionViewCell: UICollectionViewCell {
         contentView.layer.cornerRadius = 16
         contentView.layer.borderWidth = 1
         contentView.layer.borderColor = UIColor.systemGray4.cgColor
+        contentView.backgroundColor = .secondarySystemBackground
         
         NSLayoutConstraint.activate([
             iconImageView.widthAnchor.constraint(equalToConstant: 32),
@@ -141,5 +134,20 @@ class CategoryCollectionViewCell: UICollectionViewCell {
             stackView.leadingAnchor.constraint(greaterThanOrEqualTo: contentView.leadingAnchor, constant: 4),
             stackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -4)
         ])
+    }
+    
+    private func applySelectedStyle() {
+        // Стиль как у тегов в деталях рецепта: светлый фон и тёмный текст
+        contentView.backgroundColor = .systemBlue.withAlphaComponent(0.1)
+        contentView.layer.borderColor = UIColor.systemBlue.cgColor
+        nameLabel.textColor = .systemBlue
+        iconImageView.tintColor = .systemBlue
+    }
+    
+    private func applyUnselectedStyle() {
+        contentView.backgroundColor = .secondarySystemBackground
+        contentView.layer.borderColor = UIColor.systemGray4.cgColor
+        nameLabel.textColor = .label
+        iconImageView.tintColor = .label
     }
 }

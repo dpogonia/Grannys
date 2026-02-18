@@ -23,6 +23,7 @@ class FilterViewController: UIViewController {
     private var isDifficultyExpanded = false
     private var isTagsExpanded = false
     private var isIngredientsExpanded = false
+    private var isTranslationExpanded = false
     
     private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -86,6 +87,8 @@ class FilterViewController: UIViewController {
         setupLayout()
     }
     
+    private var availableLanguages: [AppLanguage] = AppLanguage.allCases
+    
     private func setupTableView() {
         tableView.delegate = self
         tableView.dataSource = self
@@ -138,27 +141,20 @@ class FilterViewController: UIViewController {
     }
     
     private func loadAllIngredients() {
-        // Загружаем топ популярных ингредиентов
-        TheMealDBService.shared.getIngredients { [weak self] result in
-            DispatchQueue.main.async {
-                switch result {
-                case .success(let ingredients):
-                    let topIngredients = ["Chicken", "Beef", "Pork", "Salmon", "Tomato",
-                                         "Onion", "Garlic", "Cheese", "Pasta", "Rice",
-                                         "Potato", "Carrot", "Mushroom", "Lemon", "Pepper",
-                                         "Butter", "Egg", "Flour", "Milk", "Oil"]
-                    
-                    self?.allIngredients = ingredients
-                        .compactMap { $0.strIngredient }
-                        .filter { topIngredients.contains($0) }
-                        .sorted()
-                    
-                    self?.tableView.reloadData()
-                case .failure:
-                    break
-                }
+        // Используем локальные рецепты, чтобы список ингредиентов появлялся сразу и работал оффлайн
+        let recipes = RecipesRepository.shared.getAllRecipes()
+        
+        var namesSet = Set<String>()
+        for recipe in recipes {
+            for ingredient in recipe.ingredients {
+                let trimmed = ingredient.name.trimmingCharacters(in: .whitespacesAndNewlines)
+                guard !trimmed.isEmpty else { continue }
+                namesSet.insert(trimmed)
             }
         }
+        
+        allIngredients = Array(namesSet).sorted { $0.localizedCaseInsensitiveCompare($1) == .orderedAscending }
+        tableView.reloadData()
     }
     
     private func updateDifficultyControl() {
@@ -213,7 +209,7 @@ class FilterViewController: UIViewController {
 
 extension FilterViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 3
+        return 4
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -224,6 +220,8 @@ extension FilterViewController: UITableViewDataSource {
             return isTagsExpanded ? allTags.count : 0
         case 2:
             return isIngredientsExpanded ? allIngredients.count : 0
+        case 3:
+            return isTranslationExpanded ? availableLanguages.count : 0
         default:
             return 0
         }
@@ -253,6 +251,9 @@ extension FilterViewController: UITableViewDataSource {
         case 2:
             sectionTitle = "Ingredients"
             isExpanded = isIngredientsExpanded
+        case 3:
+            sectionTitle = "Translation"
+            isExpanded = isTranslationExpanded
         default:
             return nil
         }
@@ -301,6 +302,8 @@ extension FilterViewController: UITableViewDataSource {
             isTagsExpanded.toggle()
         case 2:
             isIngredientsExpanded.toggle()
+        case 3:
+            isTranslationExpanded.toggle()
         default:
             return
         }
@@ -363,6 +366,23 @@ extension FilterViewController: UITableViewDataSource {
             
             return cell
             
+        case 3:
+            cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+            
+            cell.textLabel?.text = nil
+            cell.detailTextLabel?.text = nil
+            cell.accessoryType = .none
+            
+            let language = availableLanguages[indexPath.row]
+            cell.textLabel?.text = language.displayName
+            cell.textLabel?.font = .systemFont(ofSize: 17)
+            
+            let current = TranslationSettings.shared.preferredLanguage
+            cell.accessoryType = (language == current) ? .checkmark : .none
+            cell.selectionStyle = .default
+            
+            return cell
+            
         default:
             return cell
         }
@@ -389,6 +409,16 @@ extension FilterViewController: UITableViewDelegate {
                 selectedIngredients.insert(ingredient)
             }
             tableView.reloadRows(at: [indexPath], with: .none)
+        } else if indexPath.section == 3 && indexPath.row < availableLanguages.count {
+            let selectedLanguage = availableLanguages[indexPath.row]
+            TranslationSettings.shared.preferredLanguage = selectedLanguage
+            
+            // Обновляем чекмарки для всех языков
+            var indexPaths: [IndexPath] = []
+            for row in 0..<availableLanguages.count {
+                indexPaths.append(IndexPath(row: row, section: 3))
+            }
+            tableView.reloadRows(at: indexPaths, with: .none)
         }
     }
     

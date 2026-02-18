@@ -26,31 +26,72 @@ class TheMealDBInteractor: TheMealDBBusinessLogic, TheMealDBDataStore {
     var selectedIngredient: TheMealDBIngredient? = nil
     var currentOffset: Int = 0
     var hasMoreRecipes: Bool = true
+    var lastFilterType: LoadRecipes.Request.FilterType? = nil
     
     private let pageSize = 10
     
+    // Базовые категории, которые всегда доступны офлайн
+    private let baseCategoryNames: [String] = ["Starter", "Breakfast", "Main"]
+    
+    private lazy var baseCategories: [TheMealDBCategory] = {
+        baseCategoryNames.map { TheMealDBCategory(strCategory: $0) }
+    }()
+    
     init(worker: TheMealDBWorkerProtocol = TheMealDBWorker()) {
         self.worker = worker
+        // Инициализируем категориs базовым набором, чтобы они были доступны до сети
+        self.categories = baseCategories
     }
     
     // MARK: - Business Logic
     
     func loadCategories(request: LoadCategories.Request) {
+        // Сначала сразу показываем базовые категории, чтобы UI не зависел от сети
+        presentBaseCategoriesIfNeeded()
+        
         worker.fetchCategories { [weak self] result in
             guard let self = self else { return }
             
             switch result {
             case .success(let fetchedCategories):
                 let processedCategories = self.processCategories(fetchedCategories)
-                self.categories = processedCategories
-                let response = LoadCategories.Response(categories: processedCategories, error: nil)
+                
+                // Добавляем к базовым только новые категории, сохраняя их в конце
+                let baseNamesSet = Set(self.baseCategoryNames)
+                let extraCategories = processedCategories.filter { category in
+                    guard let name = category.strCategory else { return false }
+                    return !baseNamesSet.contains(name)
+                }
+                
+                let finalCategories = self.baseCategories + extraCategories
+                
+                self.categories = finalCategories
+                let response = LoadCategories.Response(categories: finalCategories, error: nil)
                 self.presenter?.presentCategories(response: response)
                 
             case .failure(let error):
-                let response = LoadCategories.Response(categories: [], error: error)
+                // При ошибке сети оставляем базовые категории, просто пробрасываем ошибку
+                let response = LoadCategories.Response(categories: self.categories, error: error)
                 self.presenter?.presentCategories(response: response)
             }
         }
+    }
+    
+    private func presentBaseCategoriesIfNeeded() {
+        // Если уже есть категории, отличные от базовых, не переотправляем
+        if !categories.isEmpty {
+            let currentNames = Set(categories.compactMap { $0.strCategory })
+            let baseNames = Set(baseCategoryNames)
+            
+            // Если уже показаны какие‑то другие категории (например, загруженные с сервера), выходим
+            if currentNames != baseNames {
+                return
+            }
+        }
+        
+        categories = baseCategories
+        let response = LoadCategories.Response(categories: baseCategories, error: nil)
+        presenter?.presentCategories(response: response)
     }
     
     private func processCategories(_ categories: [TheMealDBCategory]) -> [TheMealDBCategory] {
@@ -177,6 +218,9 @@ class TheMealDBInteractor: TheMealDBBusinessLogic, TheMealDBDataStore {
     }
     
     func loadRecipes(request: LoadRecipes.Request) {
+        // Запоминаем последний тип фильтра, чтобы уметь обновлять по pull-to-refresh
+        lastFilterType = request.filterType
+        
         if !request.append {
             currentOffset = 0
             hasMoreRecipes = true

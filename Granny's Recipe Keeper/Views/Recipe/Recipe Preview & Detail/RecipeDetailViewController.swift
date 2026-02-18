@@ -10,6 +10,10 @@ import UIKit
 class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, RecipeImageLoadable {
 
     private var recipe: Recipe
+    
+    // MARK: - Translation
+    private var currentTranslation: RecipeTranslationPayload?
+    private var isShowingTranslation = false
 
     weak var delegate: RecipeDetailViewControllerDelegate?
 
@@ -33,6 +37,13 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         imageView.backgroundColor = .secondarySystemBackground
         imageView.tintColor = .systemGray
         return imageView
+    }()
+
+    private let translationSegmentedControl: UISegmentedControl = {
+        let control = UISegmentedControl(items: ["Original", "Translated"])
+        control.translatesAutoresizingMaskIntoConstraints = false
+        control.selectedSegmentIndex = 0
+        return control
     }()
 
     private let nameLabel: UILabel = {
@@ -157,6 +168,7 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         setupCameraButton()
         setupLayout()
         configure()
+        setupTranslationControl()
     }
     
     private func setupCameraButton() {
@@ -341,6 +353,7 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
 
+        contentView.addSubview(translationSegmentedControl)
         contentView.addSubview(recipeImageView)
         contentView.addSubview(cameraButton)
         contentView.addSubview(nameLabel)
@@ -366,7 +379,10 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
 
-            recipeImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
+            translationSegmentedControl.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 16),
+            translationSegmentedControl.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
+
+            recipeImageView.topAnchor.constraint(equalTo: translationSegmentedControl.bottomAnchor, constant: 16),
             recipeImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             recipeImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             recipeImageView.heightAnchor.constraint(equalToConstant: 300),
@@ -379,7 +395,7 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
             nameLabel.topAnchor.constraint(equalTo: recipeImageView.bottomAnchor, constant: 16),
             nameLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             nameLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-
+            
             ingredientsLabel.topAnchor.constraint(equalTo: nameLabel.bottomAnchor, constant: 24),
             ingredientsLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             ingredientsLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
@@ -417,6 +433,110 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
             tagsStackView.trailingAnchor.constraint(lessThanOrEqualTo: contentView.trailingAnchor, constant: -16),
             tagsStackView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -16)
         ])
+    }
+
+    private func setupTranslationControl() {
+        translationSegmentedControl.addTarget(self, action: #selector(didChangeTranslationSegment), for: .valueChanged)
+    }
+
+    @objc private func didChangeTranslationSegment() {
+        let shouldShowTranslation = translationSegmentedControl.selectedSegmentIndex == 1
+        isShowingTranslation = shouldShowTranslation
+        
+        if shouldShowTranslation {
+            loadTranslationIfNeeded()
+        } else {
+            // Возвращаем оригинальный текст
+            configure()
+        }
+    }
+
+    private func loadTranslationIfNeeded() {
+        if let translation = currentTranslation {
+            applyTranslation(translation)
+            return
+        }
+        
+        let currentLanguage = TranslationSettings.shared.preferredLanguage
+        
+        if currentLanguage == .english {
+            presentLanguageSelectionForTranslation { [weak self] selectedLanguage in
+                TranslationSettings.shared.preferredLanguage = selectedLanguage
+                self?.loadTranslationIfNeeded()
+            }
+            return
+        }
+        
+        let targetLanguage = currentLanguage
+        
+        if #available(iOS 17.4, *) {
+            AppleRecipeTranslationService.shared.translate(
+                recipe: recipe,
+                to: targetLanguage,
+                presentingFrom: self
+            ) { [weak self] result in
+                guard let self = self else { return }
+                
+                switch result {
+                case .success(let payload):
+                    self.currentTranslation = payload
+                    if self.isShowingTranslation {
+                        self.applyTranslation(payload)
+                    }
+                case .failure:
+                    // При ошибке остаёмся на оригинале
+                    self.translationSegmentedControl.selectedSegmentIndex = 0
+                    self.isShowingTranslation = false
+                }
+            }
+        } else {
+            translationSegmentedControl.selectedSegmentIndex = 0
+            isShowingTranslation = false
+        }
+    }
+
+    private func applyTranslation(_ translation: RecipeTranslationPayload) {
+        nameLabel.text = translation.name
+        
+        if let ingredientsText = translation.ingredientsText, !ingredientsText.isEmpty {
+            ingredientsTextView.text = ingredientsText
+        }
+        
+        if let instructions = translation.instructions, !instructions.isEmpty {
+            instructionsTextView.text = instructions
+        }
+        
+        // Категории и теги пока оставляем на оригинальном языке, чтобы не ломать фильтры
+    }
+    
+    private func presentLanguageSelectionForTranslation(onSelected: @escaping (AppLanguage) -> Void) {
+        let current = TranslationSettings.shared.preferredLanguage
+        
+        let alert = UIAlertController(
+            title: "Select translation language",
+            message: "Choose language for translated text",
+            preferredStyle: .actionSheet
+        )
+        
+        for language in AppLanguage.allCases where language != .english {
+            let suffix = (language == current) ? " ✓" : ""
+            let action = UIAlertAction(title: language.displayName + suffix, style: .default) { _ in
+                onSelected(language)
+            }
+            alert.addAction(action)
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+            self?.translationSegmentedControl.selectedSegmentIndex = 0
+            self?.isShowingTranslation = false
+        })
+        
+        if let popover = alert.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 1, height: 1)
+        }
+        
+        present(alert, animated: true)
     }
 
     private func configure() {
@@ -493,16 +613,17 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
     private func createCategoryBadge(categoryName: String) -> UIView {
         let containerView = UIView()
         containerView.translatesAutoresizingMaskIntoConstraints = false
-        containerView.backgroundColor = .systemBlue.withAlphaComponent(0.1)
+        // Стиль категорий делаем таким же, как у тегов
+        containerView.backgroundColor = .secondarySystemBackground
         containerView.layer.cornerRadius = 12
         containerView.layer.borderWidth = 1
-        containerView.layer.borderColor = UIColor.systemBlue.cgColor
+        containerView.layer.borderColor = UIColor.systemGray4.cgColor
 
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = categoryName
-        label.font = .systemFont(ofSize: 14, weight: .medium)
-        label.textColor = .systemBlue
+        label.font = .systemFont(ofSize: 14, weight: .regular)
+        label.textColor = .label
         label.numberOfLines = 1
 
         containerView.addSubview(label)
