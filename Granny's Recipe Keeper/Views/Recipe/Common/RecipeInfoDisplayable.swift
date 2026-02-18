@@ -40,7 +40,11 @@ extension RecipeInfoDisplayable {
         if infoParts.isEmpty {
             recipeInfoLabel.isHidden = true
         } else {
-            recipeInfoLabel.text = infoParts.joined(separator: "  •  ")
+            // Убираем точки между элементами и делаем строку адаптивной
+            recipeInfoLabel.text = infoParts.joined(separator: "   ")
+            recipeInfoLabel.adjustsFontSizeToFitWidth = true
+            recipeInfoLabel.minimumScaleFactor = 0.7
+            recipeInfoLabel.numberOfLines = 1
             recipeInfoLabel.isHidden = false
         }
     }

@@ -35,6 +35,7 @@ protocol TheMealDBDataStore {
     var selectedIngredient: TheMealDBIngredient? { get set }
     var currentOffset: Int { get set }
     var hasMoreRecipes: Bool { get set }
+    var lastFilterType: LoadRecipes.Request.FilterType? { get set }
 }
 
 // MARK: - Presentation Logic Protocol (Presenter Interface)
