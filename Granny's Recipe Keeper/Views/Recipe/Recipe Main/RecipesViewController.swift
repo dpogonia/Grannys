@@ -23,150 +23,74 @@ class RecipesViewController: UIViewController {
     
     private var filterIngredients: Set<String> = []
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.register(
-            RecipeTableViewCell.self,
-            forCellReuseIdentifier: RecipeTableViewCell.cellIdentifier
-        )
-        tableView.refreshControl = refreshControl
         return tableView
     }()
     
-    private lazy var refreshControl: UIRefreshControl = {
+    private let refreshControl: UIRefreshControl = {
         let control = UIRefreshControl()
-        control.addTarget(self, action: #selector(refreshRecipes), for: .valueChanged)
         return control
     }()
     
-    private lazy var searchController: UISearchController = {
+    private let searchController: UISearchController = {
         let controller = UISearchController(searchResultsController: nil)
-        controller.searchResultsUpdater = self
         controller.obscuresBackgroundDuringPresentation = false
         controller.searchBar.placeholder = "Search recipes..."
         return controller
     }()
     
-    private lazy var categoryButton: UIButton = {
+    private let categoryButton: UIButton = {
         let button = UIButton(type: .system)
         button.tintColor = .label
         button.setTitleColor(.label, for: .normal)
         button.contentHorizontalAlignment = .left
-        button.addTarget(self, action: #selector(didTapCategoryButton), for: .touchUpInside)
         return button
     }()
     
-    private lazy var addButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            barButtonSystemItem: .add,
-            target: self,
-            action: #selector(didTapAddButton)
-        )
-        return button
+    private let addButton: UIBarButtonItem = {
+        return UIBarButtonItem(barButtonSystemItem: .add, target: nil, action: nil)
     }()
     
-    private lazy var filterButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: "line.3.horizontal.decrease.circle"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapFilterButton)
-        )
-        return button
+    private let filterButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: UIImage(systemName: "line.3.horizontal.decrease.circle"), style: .plain, target: nil, action: nil)
     }()
     
-    private lazy var mealDBButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: "globe"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapMealDBButton)
-        )
-        return button
+    private let mealDBButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: UIImage(systemName: "globe"), style: .plain, target: nil, action: nil)
     }()
     
-    private lazy var emptyStateView: UIView = {
-        let containerView = UIView()
-        containerView.translatesAutoresizingMaskIntoConstraints = false
-        containerView.isHidden = true
-        
-        let iconImageView = UIImageView()
-        iconImageView.translatesAutoresizingMaskIntoConstraints = false
-        iconImageView.image = UIImage(systemName: "fork.knife.circle.fill")
-        iconImageView.tintColor = .systemBlue
-        iconImageView.contentMode = .scaleAspectFit
-        iconImageView.tag = 999
-        
-        let titleLabel = UILabel()
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-        titleLabel.text = "No recipes"
-        titleLabel.font = .systemFont(ofSize: 24, weight: .bold)
-        titleLabel.textColor = .label
-        titleLabel.textAlignment = .center
-        
-        let messageLabel = UILabel()
-        messageLabel.translatesAutoresizingMaskIntoConstraints = false
-        messageLabel.text = "Add your first recipe\nto start cooking!"
-        messageLabel.font = .systemFont(ofSize: 17, weight: .regular)
-        messageLabel.textColor = .secondaryLabel
-        messageLabel.textAlignment = .center
-        messageLabel.numberOfLines = 0
-        
-        let addButton = UIButton(type: .system)
-        addButton.translatesAutoresizingMaskIntoConstraints = false
-        addButton.setTitle("Add Recipe", for: .normal)
-        addButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
-        addButton.setTitleColor(.white, for: .normal)
-        addButton.backgroundColor = .systemBlue
-        addButton.layer.cornerRadius = 12
-        addButton.layer.shadowColor = UIColor.systemBlue.cgColor
-        addButton.layer.shadowOffset = CGSize(width: 0, height: 4)
-        addButton.layer.shadowRadius = 8
-        addButton.layer.shadowOpacity = 0.3
-        addButton.addTarget(self, action: #selector(didTapAddButton), for: .touchUpInside)
-        
-        containerView.addSubview(iconImageView)
-        containerView.addSubview(titleLabel)
-        containerView.addSubview(messageLabel)
-        containerView.addSubview(addButton)
-        
-        NSLayoutConstraint.activate([
-            iconImageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            iconImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 240),
-            iconImageView.heightAnchor.constraint(equalToConstant: 240),
-            
-            titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 40),
-            titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 32),
-            titleLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -32),
-            
-            messageLabel.topAnchor.constraint(equalTo: titleLabel.bottomAnchor, constant: 12),
-            messageLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 32),
-            messageLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -32),
-            
-            addButton.topAnchor.constraint(equalTo: messageLabel.bottomAnchor, constant: 32),
-            addButton.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
-            addButton.widthAnchor.constraint(equalToConstant: 200),
-            addButton.heightAnchor.constraint(equalToConstant: 50)
-        ])
-        
-        iconImageView.alpha = 0
-        titleLabel.alpha = 0
-        messageLabel.alpha = 0
-        addButton.alpha = 0
-        
-        return containerView
-    }()
+    private var emptyStateView: UIView!
     
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupEmptyStateView()
         setupView()
+        setupTableView()
+        setupNavigationBar()
+        setupButtons()
         loadCategories()
         loadRecipes()
-        setupTableView()
         setupConstraints()
-        setupNavigationBar()
+    }
+    
+    private func setupEmptyStateView() {
+        emptyStateView = EmptyStateViewFactory.createEmptyStateView(
+            target: self,
+            action: #selector(didTapAddButton)
+        )
+    }
+    
+    private func setupButtons() {
+        refreshControl.addTarget(self, action: #selector(refreshRecipes), for: .valueChanged)
+        categoryButton.addTarget(self, action: #selector(didTapCategoryButton), for: .touchUpInside)
+        addButton.target = self
+        addButton.action = #selector(didTapAddButton)
+        filterButton.target = self
+        filterButton.action = #selector(didTapFilterButton)
+        mealDBButton.target = self
+        mealDBButton.action = #selector(didTapMealDBButton)
     }
 
     // Публичный метод для обновления списка рецептов
@@ -229,58 +153,63 @@ private extension RecipesViewController {
         view.backgroundColor = .systemBackground
     }
     
-    func setupNavigationBar() {
-        navigationItem.titleView = categoryButton
-        navigationItem.rightBarButtonItems = [addButton, mealDBButton, filterButton]
-        navigationItem.searchController = searchController
-        navigationItem.hidesSearchBarWhenScrolling = false
-    }
     
     func loadCategories() {
         allCategories = RecipesRepository.shared.getAllCategories()
     }
 
     func loadRecipes() {
+        let loadedRecipes = fetchRecipesBasedOnSelection()
+        recipes = applyFilters(to: loadedRecipes)
+        updateCategoryButtonTitle()
+        updateEmptyState()
+        tableView.reloadData()
+    }
+    
+    private func fetchRecipesBasedOnSelection() -> [Recipe] {
         let favoriteCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")
         let archiveCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000002")
         let isFavoriteSelected = selectedCategory?.id == favoriteCategoryId
         let isArchiveSelected = selectedCategory?.id == archiveCategoryId
         
-        var loadedRecipes: [Recipe] = []
-        
         if isFavoriteSelected {
-            if isSearching, let searchText = searchController.searchBar.text, !searchText.isEmpty {
-                let favoriteRecipes = RecipesRepository.shared.getFavoriteRecipes()
-                loadedRecipes = favoriteRecipes.filter { recipe in
-                    recipe.name.localizedCaseInsensitiveContains(searchText) ||
-                    (recipe.recipeInstructions?.localizedCaseInsensitiveContains(searchText) ?? false)
-                }
-            } else {
-                loadedRecipes = RecipesRepository.shared.getFavoriteRecipes()
-            }
+            return fetchFavoriteRecipes()
         } else if isArchiveSelected {
-            if isSearching, let searchText = searchController.searchBar.text, !searchText.isEmpty {
-                let archivedRecipes = RecipesRepository.shared.getAllRecipes(archived: true)
-                loadedRecipes = archivedRecipes.filter { recipe in
-                    recipe.name.localizedCaseInsensitiveContains(searchText) ||
-                    (recipe.recipeInstructions?.localizedCaseInsensitiveContains(searchText) ?? false)
-                }
-            } else {
-                loadedRecipes = RecipesRepository.shared.getAllRecipes(archived: true)
-            }
+            return fetchArchivedRecipes()
         } else {
-            if isSearching, let searchText = searchController.searchBar.text, !searchText.isEmpty {
-                loadedRecipes = RecipesRepository.shared.searchRecipes(query: searchText, in: selectedCategory)
-            } else {
-                loadedRecipes = RecipesRepository.shared.getRecipes(in: selectedCategory, archived: false)
-            }
+            return fetchRegularRecipes()
         }
-        
-        recipes = applyFilters(to: loadedRecipes)
-        
-        updateCategoryButtonTitle()
-        updateEmptyState()
-        tableView.reloadData()
+    }
+    
+    private func fetchFavoriteRecipes() -> [Recipe] {
+        if isSearching, let searchText = searchController.searchBar.text, !searchText.isEmpty {
+            return filterRecipesBySearch(RecipesRepository.shared.getFavoriteRecipes(), searchText: searchText)
+        } else {
+            return RecipesRepository.shared.getFavoriteRecipes()
+        }
+    }
+    
+    private func fetchArchivedRecipes() -> [Recipe] {
+        if isSearching, let searchText = searchController.searchBar.text, !searchText.isEmpty {
+            return filterRecipesBySearch(RecipesRepository.shared.getAllRecipes(archived: true), searchText: searchText)
+        } else {
+            return RecipesRepository.shared.getAllRecipes(archived: true)
+        }
+    }
+    
+    private func fetchRegularRecipes() -> [Recipe] {
+        if isSearching, let searchText = searchController.searchBar.text, !searchText.isEmpty {
+            return RecipesRepository.shared.searchRecipes(query: searchText, in: selectedCategory)
+        } else {
+            return RecipesRepository.shared.getRecipes(in: selectedCategory, archived: false)
+        }
+    }
+    
+    private func filterRecipesBySearch(_ recipes: [Recipe], searchText: String) -> [Recipe] {
+        return recipes.filter { recipe in
+            recipe.name.localizedCaseInsensitiveContains(searchText) ||
+            (recipe.recipeInstructions?.localizedCaseInsensitiveContains(searchText) ?? false)
+        }
     }
     
     private func applyFilters(to recipes: [Recipe]) -> [Recipe] {
@@ -345,48 +274,50 @@ private extension RecipesViewController {
     }
     
     func updateCategoryButtonTitle() {
-        let titleText: String
+        let (titleText, iconImage) = getCategoryTitleAndIcon()
+        let attributedTitle = createAttributedTitle(text: titleText, icon: iconImage)
+        categoryButton.setAttributedTitle(attributedTitle, for: .normal)
+        categoryButton.frame = CGRect(x: 0, y: 0, width: 250, height: 44)
+    }
+    
+    private func getCategoryTitleAndIcon() -> (String, UIImage?) {
         let favoriteCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")
         let archiveCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000002")
         let isFavoriteSelected = selectedCategory?.id == favoriteCategoryId
         let isArchiveSelected = selectedCategory?.id == archiveCategoryId
         
+        let titleText: String
+        let iconImage: UIImage?
+        
         if isFavoriteSelected {
             titleText = "FAVORITES"
-        } else if isArchiveSelected {
-            titleText = "ARCHIVE"
-        } else if let category = selectedCategory {
-            titleText = category.name.uppercased()
-        } else {
-            titleText = "ALL RECIPES"
-        }
-        
-        let iconImage: UIImage?
-        if isFavoriteSelected {
             iconImage = UIImage(systemName: "heart.fill")
         } else if isArchiveSelected {
+            titleText = "ARCHIVE"
             iconImage = UIImage(systemName: "archivebox.fill")
+        } else if let category = selectedCategory {
+            titleText = category.name.uppercased()
+            iconImage = UIImage(systemName: "fork.knife")
         } else {
+            titleText = "ALL RECIPES"
             iconImage = UIImage(systemName: "fork.knife")
         }
         
+        return (titleText, iconImage)
+    }
+    
+    private func createAttributedTitle(text: String, icon: UIImage?) -> NSAttributedString {
         let font = UIFont.systemFont(ofSize: 19.5, weight: .regular)
         
         let iconAttachment = NSTextAttachment()
-        iconAttachment.image = iconImage?.withTintColor(.label, renderingMode: .alwaysOriginal)
-        
-        let iconSize: CGFloat = 18.2
-        iconAttachment.bounds = CGRect(x: 0, y: -1, width: iconSize, height: iconSize)
+        iconAttachment.image = icon?.withTintColor(.label, renderingMode: .alwaysOriginal)
+        iconAttachment.bounds = CGRect(x: 0, y: -1, width: 18.2, height: 18.2)
         
         let iconString = NSAttributedString(attachment: iconAttachment)
         let spacing = NSAttributedString(string: " ", attributes: [.font: font])
-        
         let titleString = NSAttributedString(
-            string: titleText,
-            attributes: [
-                .font: font,
-                .foregroundColor: UIColor.label
-            ]
+            string: text,
+            attributes: [.font: font, .foregroundColor: UIColor.label]
         )
         
         let attributedTitle = NSMutableAttributedString()
@@ -394,17 +325,27 @@ private extension RecipesViewController {
         attributedTitle.append(spacing)
         attributedTitle.append(titleString)
         
-        categoryButton.setAttributedTitle(attributedTitle, for: .normal)
-        
-        let maxWidth: CGFloat = 250
-        categoryButton.frame = CGRect(x: 0, y: 0, width: maxWidth, height: 44)
+        return attributedTitle
     }
     
     func setupTableView() {
         view.addSubview(tableView)
         view.addSubview(emptyStateView)
+        tableView.register(
+            RecipeTableViewCell.self,
+            forCellReuseIdentifier: RecipeTableViewCell.cellIdentifier
+        )
+        tableView.refreshControl = refreshControl
         tableView.dataSource = self
         tableView.delegate = self
+    }
+    
+    func setupNavigationBar() {
+        navigationItem.titleView = categoryButton
+        navigationItem.rightBarButtonItems = [addButton, mealDBButton, filterButton]
+        navigationItem.searchController = searchController
+        navigationItem.hidesSearchBarWhenScrolling = false
+        searchController.searchResultsUpdater = self
     }
     
     func setupConstraints() {
@@ -540,76 +481,78 @@ extension RecipesViewController: UITableViewDelegate {
         let isArchiveSelected = selectedCategory?.id == archiveCategoryId
         
         if isArchiveSelected {
-            let unarchiveAction = UIContextualAction(style: .normal, title: nil) { [weak self] (action, view, completionHandler) in
-                RecipesRepository.shared.unarchiveRecipe(recipe)
-                self?.recipes.remove(at: indexPath.row)
-                tableView.deleteRows(at: [indexPath], with: .fade)
-                self?.updateEmptyState()
-                completionHandler(true)
-            }
-            unarchiveAction.image = UIImage(systemName: "tray.and.arrow.up.fill")
-            unarchiveAction.backgroundColor = .systemGreen
-            
-            let deleteAction = UIContextualAction(style: .destructive, title: nil) { [weak self] (action, view, completionHandler) in
-                let alert = UIAlertController(
-                    title: "Delete recipe?",
-                    message: "This action cannot be undone",
-                    preferredStyle: .alert
-                )
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-                    completionHandler(false)
-                })
-                
-                alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-                    RecipesRepository.shared.deleteRecipe(recipe)
-                    self?.recipes.remove(at: indexPath.row)
-                    tableView.deleteRows(at: [indexPath], with: .fade)
-                    self?.updateEmptyState()
-                    completionHandler(true)
-                })
-                
-                self?.present(alert, animated: true)
-            }
-            deleteAction.image = UIImage(systemName: "trash.fill")
-            
-            return UISwipeActionsConfiguration(actions: [deleteAction, unarchiveAction])
+            return createArchiveSwipeActions(for: recipe, at: indexPath, in: tableView)
         } else {
-            let archiveAction = UIContextualAction(style: .normal, title: nil) { [weak self] (action, view, completionHandler) in
-                RecipesRepository.shared.archiveRecipe(recipe)
-                self?.recipes.remove(at: indexPath.row)
-                tableView.deleteRows(at: [indexPath], with: .fade)
-                self?.updateEmptyState()
-                completionHandler(true)
-            }
-            archiveAction.image = UIImage(systemName: "archivebox.fill")
-            archiveAction.backgroundColor = .systemOrange
-            
-            let deleteAction = UIContextualAction(style: .destructive, title: nil) { [weak self] (action, view, completionHandler) in
-                let alert = UIAlertController(
-                    title: "Delete recipe?",
-                    message: "This action cannot be undone",
-                    preferredStyle: .alert
-                )
-                
-                alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
-                    completionHandler(false)
-                })
-                
-                alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-                    RecipesRepository.shared.deleteRecipe(recipe)
-                    self?.recipes.remove(at: indexPath.row)
-                    tableView.deleteRows(at: [indexPath], with: .fade)
-                    self?.updateEmptyState()
-                    completionHandler(true)
-                })
-                
-                self?.present(alert, animated: true)
-            }
-            deleteAction.image = UIImage(systemName: "trash.fill")
-            
-            return UISwipeActionsConfiguration(actions: [deleteAction, archiveAction])
+            return createRegularSwipeActions(for: recipe, at: indexPath, in: tableView)
         }
+    }
+    
+    private func createArchiveSwipeActions(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UISwipeActionsConfiguration {
+        let unarchiveAction = createUnarchiveAction(for: recipe, at: indexPath, in: tableView)
+        let deleteAction = createDeleteAction(for: recipe, at: indexPath, in: tableView)
+        return UISwipeActionsConfiguration(actions: [deleteAction, unarchiveAction])
+    }
+    
+    private func createRegularSwipeActions(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UISwipeActionsConfiguration {
+        let archiveAction = createArchiveAction(for: recipe, at: indexPath, in: tableView)
+        let deleteAction = createDeleteAction(for: recipe, at: indexPath, in: tableView)
+        return UISwipeActionsConfiguration(actions: [deleteAction, archiveAction])
+    }
+    
+    private func createUnarchiveAction(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UIContextualAction {
+        let action = UIContextualAction(style: .normal, title: nil) { [weak self] (_, _, completionHandler) in
+            RecipesRepository.shared.unarchiveRecipe(recipe)
+            self?.removeRecipe(at: indexPath, in: tableView)
+            completionHandler(true)
+        }
+        action.image = UIImage(systemName: "tray.and.arrow.up.fill")
+        action.backgroundColor = .systemGreen
+        return action
+    }
+    
+    private func createArchiveAction(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UIContextualAction {
+        let action = UIContextualAction(style: .normal, title: nil) { [weak self] (_, _, completionHandler) in
+            RecipesRepository.shared.archiveRecipe(recipe)
+            self?.removeRecipe(at: indexPath, in: tableView)
+            completionHandler(true)
+        }
+        action.image = UIImage(systemName: "archivebox.fill")
+        action.backgroundColor = .systemOrange
+        return action
+    }
+    
+    private func createDeleteAction(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UIContextualAction {
+        let action = UIContextualAction(style: .destructive, title: nil) { [weak self] (_, _, completionHandler) in
+            self?.showDeleteConfirmation(for: recipe, at: indexPath, in: tableView, completionHandler: completionHandler)
+        }
+        action.image = UIImage(systemName: "trash.fill")
+        return action
+    }
+    
+    private func removeRecipe(at indexPath: IndexPath, in tableView: UITableView) {
+        recipes.remove(at: indexPath.row)
+        tableView.deleteRows(at: [indexPath], with: .fade)
+        updateEmptyState()
+    }
+    
+    private func showDeleteConfirmation(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView, completionHandler: @escaping (Bool) -> Void) {
+        let alert = UIAlertController(
+            title: "Delete recipe?",
+            message: "This action cannot be undone",
+            preferredStyle: .alert
+        )
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { _ in
+            completionHandler(false)
+        })
+        
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            RecipesRepository.shared.deleteRecipe(recipe)
+            self?.removeRecipe(at: indexPath, in: tableView)
+            completionHandler(true)
+        })
+        
+        present(alert, animated: true)
     }
 }
 

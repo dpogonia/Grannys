@@ -10,17 +10,6 @@ import UIKit
 // ДЗ CLEANSWIFT: Router - управляет навигацией
 // Router отвечает за переходы между экранами и передачу данных
 
-protocol TheMealDBRoutingLogic {
-    func routeToRecipeDetail(recipe: TheMealDBRecipe)
-    func routeToFilters(areas: [AreaWithFlag], ingredients: [TheMealDBIngredient], selectedArea: AreaWithFlag?, selectedIngredient: TheMealDBIngredient?)
-    func routeToSearch()
-    func routeBack()
-}
-
-protocol TheMealDBDataPassing {
-    var dataStore: TheMealDBDataStore? { get }
-}
-
 class TheMealDBRouter: NSObject, TheMealDBRoutingLogic, TheMealDBDataPassing {
     
     weak var viewController: TheMealDBViewController?

@@ -105,7 +105,7 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         return textView
     }()
 
-    private lazy var addButton: UIButton = {
+    private let addButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitle("Add Recipe", for: .normal)
@@ -117,7 +117,6 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         button.layer.shadowOffset = CGSize(width: 0, height: 4)
         button.layer.shadowRadius = 8
         button.layer.shadowOpacity = 0.3
-        button.addTarget(self, action: #selector(didTapAddButton), for: .touchUpInside)
         return button
     }()
 
@@ -134,10 +133,19 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
     override func viewDidLoad() {
         super.viewDidLoad()
         checkIfRecipeExists()
+        setupButtons()
         setupView()
         setupNavigationBar()
         setupLayout()
         configure()
+    }
+    
+    private func setupButtons() {
+        addButton.addTarget(self, action: #selector(didTapAddButton), for: .touchUpInside)
+        
+        favoriteButton.target = self
+        favoriteButton.action = #selector(didTapFavoriteButton)
+        updateFavoriteButton()
     }
 
     private func checkIfRecipeExists() {
@@ -167,15 +175,8 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         addButton.isHidden = apiRecipe == nil
     }
 
-    private lazy var favoriteButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: isFavorite ? "heart.fill" : "heart"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapFavoriteButton)
-        )
-        button.tintColor = isFavorite ? .systemRed : .label
-        return button
+    private let favoriteButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: nil, style: .plain, target: nil, action: nil)
     }()
 
     private func setupNavigationBar() {

@@ -10,26 +10,6 @@ import Foundation
 // ДЗ CLEANSWIFT: Presenter - форматирует данные для отображения
 // Presenter получает Response от Interactor и преобразует в ViewModel для ViewController
 
-protocol TheMealDBPresentationLogic {
-    func presentCategories(response: LoadCategories.Response)
-    func presentCountries(response: LoadCountries.Response)
-    func presentIngredients(response: LoadIngredients.Response)
-    func presentRecipes(response: LoadRecipes.Response, append: Bool, selectedCategory: String?, selectedArea: AreaWithFlag?, selectedIngredient: TheMealDBIngredient?)
-    func presentSelectedCategory(response: SelectCategory.Response)
-    func presentRandomRecipe(response: LoadRandomRecipe.Response)
-    func presentRecipeDetail(response: ShowRecipeDetail.Response)
-}
-
-protocol TheMealDBDisplayLogic: AnyObject {
-    func displayCategories(viewModel: LoadCategories.ViewModel)
-    func displayCountries(viewModel: LoadCountries.ViewModel)
-    func displayIngredients(viewModel: LoadIngredients.ViewModel)
-    func displayRecipes(viewModel: LoadRecipes.ViewModel)
-    func displaySelectedCategory(viewModel: SelectCategory.ViewModel)
-    func displayRandomRecipe(viewModel: LoadRandomRecipe.ViewModel)
-    func displayRecipeDetail(viewModel: ShowRecipeDetail.ViewModel)
-}
-
 class TheMealDBPresenter: TheMealDBPresentationLogic {
     
     weak var viewController: TheMealDBDisplayLogic?

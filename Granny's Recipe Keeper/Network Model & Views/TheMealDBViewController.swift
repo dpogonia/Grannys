@@ -31,7 +31,7 @@ class TheMealDBViewController: UIViewController {
     
     private let pageSize = 10
     
-    private lazy var categoriesCollectionView: UICollectionView = {
+    private let categoriesCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumInteritemSpacing = 12
@@ -42,15 +42,10 @@ class TheMealDBViewController: UIViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemBackground
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.register(
-            CategoryCollectionViewCell.self,
-            forCellWithReuseIdentifier: CategoryCollectionViewCell.cellIdentifier
-        )
         return collectionView
     }()
     
-    // Коллекция для отображения стран из REST Countries API
-    private lazy var countriesCollectionView: UICollectionView = {
+    private let countriesCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumInteritemSpacing = 12
@@ -61,15 +56,10 @@ class TheMealDBViewController: UIViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemBackground
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.register(
-            CountryCollectionViewCell.self,
-            forCellWithReuseIdentifier: CountryCollectionViewCell.cellIdentifier
-        )
         return collectionView
     }()
     
-    // Label для разделения категорий и стран
-    private lazy var countriesLabel: UILabel = {
+    private let countriesLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "Filter by Country"
@@ -78,8 +68,7 @@ class TheMealDBViewController: UIViewController {
         return label
     }()
     
-    // Label для ингредиентов
-    private lazy var ingredientsLabel: UILabel = {
+    private let ingredientsLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
         label.text = "Filter by Ingredient"
@@ -88,8 +77,7 @@ class TheMealDBViewController: UIViewController {
         return label
     }()
     
-    // Коллекция для отображения ингредиентов
-    private lazy var ingredientsCollectionView: UICollectionView = {
+    private let ingredientsCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumInteritemSpacing = 12
@@ -100,79 +88,40 @@ class TheMealDBViewController: UIViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemBackground
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.register(
-            IngredientCollectionViewCell.self,
-            forCellWithReuseIdentifier: IngredientCollectionViewCell.cellIdentifier
-        )
         return collectionView
     }()
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.register(
-            RecipeTableViewCell.self,
-            forCellReuseIdentifier: RecipeTableViewCell.cellIdentifier
-        )
-        tableView.register(
-            SkeletonLoadingCell.self,
-            forCellReuseIdentifier: SkeletonLoadingCell.cellIdentifier
-        )
-        tableView.refreshControl = refreshControl
         return tableView
     }()
     
-    private lazy var refreshControl: UIRefreshControl = {
-        let control = UIRefreshControl()
-        control.addTarget(self, action: #selector(refreshData), for: .valueChanged)
-        return control
+    private let refreshControl: UIRefreshControl = {
+        return UIRefreshControl()
     }()
     
-    private lazy var activityIndicator: UIActivityIndicatorView = {
+    private let activityIndicator: UIActivityIndicatorView = {
         let indicator = UIActivityIndicatorView(style: .large)
         indicator.translatesAutoresizingMaskIntoConstraints = false
         indicator.hidesWhenStopped = true
         return indicator
     }()
     
-    private lazy var randomButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: "shuffle"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapRandomButton)
-        )
-        return button
+    private let randomButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: UIImage(systemName: "shuffle"), style: .plain, target: nil, action: nil)
     }()
     
-    
-    private lazy var searchButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            barButtonSystemItem: .search,
-            target: self,
-            action: #selector(didTapSearchButton)
-        )
-        return button
+    private let searchButton: UIBarButtonItem = {
+        return UIBarButtonItem(barButtonSystemItem: .search, target: nil, action: nil)
     }()
     
-    private lazy var filterButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: "line.3.horizontal.decrease.circle"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapFilterButton)
-        )
-        return button
+    private let filterButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: UIImage(systemName: "line.3.horizontal.decrease.circle"), style: .plain, target: nil, action: nil)
     }()
     
-    private lazy var backButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: "chevron.left"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapBack)
-        )
-        return button
+    private let backButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: UIImage(systemName: "chevron.left"), style: .plain, target: nil, action: nil)
     }()
     
     // Object lifecycle
@@ -302,19 +251,59 @@ class TheMealDBViewController: UIViewController {
     }
     
     private func setupNavigationBar() {
+        setupBarButtons()
         navigationItem.leftBarButtonItem = backButton
         navigationItem.rightBarButtonItems = [randomButton, searchButton, filterButton]
+    }
+    
+    private func setupBarButtons() {
+        randomButton.target = self
+        randomButton.action = #selector(didTapRandomButton)
+        searchButton.target = self
+        searchButton.action = #selector(didTapSearchButton)
+        filterButton.target = self
+        filterButton.action = #selector(didTapFilterButton)
+        backButton.target = self
+        backButton.action = #selector(didTapBack)
+        refreshControl.addTarget(self, action: #selector(refreshData), for: .valueChanged)
     }
     
     private func setupTableView() {
         view.addSubview(categoriesCollectionView)
         view.addSubview(tableView)
         
-        categoriesCollectionView.dataSource = self
-        categoriesCollectionView.delegate = self
+        setupCollectionViews()
         
+        tableView.register(
+            RecipeTableViewCell.self,
+            forCellReuseIdentifier: RecipeTableViewCell.cellIdentifier
+        )
+        tableView.register(
+            SkeletonLoadingCell.self,
+            forCellReuseIdentifier: SkeletonLoadingCell.cellIdentifier
+        )
+        tableView.refreshControl = refreshControl
         tableView.dataSource = self
         tableView.delegate = self
+    }
+    
+    private func setupCollectionViews() {
+        categoriesCollectionView.dataSource = self
+        categoriesCollectionView.delegate = self
+        categoriesCollectionView.register(
+            CategoryCollectionViewCell.self,
+            forCellWithReuseIdentifier: CategoryCollectionViewCell.cellIdentifier
+        )
+        
+        countriesCollectionView.register(
+            CountryCollectionViewCell.self,
+            forCellWithReuseIdentifier: CountryCollectionViewCell.cellIdentifier
+        )
+        
+        ingredientsCollectionView.register(
+            IngredientCollectionViewCell.self,
+            forCellWithReuseIdentifier: IngredientCollectionViewCell.cellIdentifier
+        )
     }
     
     private func setupConstraints() {
@@ -361,16 +350,24 @@ extension TheMealDBViewController: UITableViewDataSource {
     
     func tableView(_ tableView: UITableView, cellForRowAt indexPath: IndexPath) -> UITableViewCell {
         if isLoading {
-            guard let cell = tableView.dequeueReusableCell(
-                withIdentifier: SkeletonLoadingCell.cellIdentifier,
-                for: indexPath
-            ) as? SkeletonLoadingCell else {
-                assertionFailure("Skeleton cell registration failed")
-                return UITableViewCell()
-            }
-            return cell
+            return dequeueSkeletonCell(for: tableView, at: indexPath)
         }
         
+        return dequeueAndConfigureRecipeCell(for: tableView, at: indexPath)
+    }
+    
+    private func dequeueSkeletonCell(for tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
+        guard let cell = tableView.dequeueReusableCell(
+            withIdentifier: SkeletonLoadingCell.cellIdentifier,
+            for: indexPath
+        ) as? SkeletonLoadingCell else {
+            assertionFailure("Skeleton cell registration failed")
+            return UITableViewCell()
+        }
+        return cell
+    }
+    
+    private func dequeueAndConfigureRecipeCell(for tableView: UITableView, at indexPath: IndexPath) -> UITableViewCell {
         guard let cell = tableView.dequeueReusableCell(
             withIdentifier: RecipeTableViewCell.cellIdentifier,
             for: indexPath
@@ -379,21 +376,24 @@ extension TheMealDBViewController: UITableViewDataSource {
             return UITableViewCell()
         }
         
-        let displayedRecipe = displayedRecipes[indexPath.row]
-        
-        // Получаем оригинальный рецепт из DataStore для конвертации
+        configureRecipeCell(cell, at: indexPath)
+        return cell
+    }
+    
+    private func configureRecipeCell(_ cell: RecipeTableViewCell, at indexPath: IndexPath) {
         guard let dataStore = router?.dataStore,
               indexPath.row < dataStore.recipes.count else {
-            return cell
+            return
         }
         
         let mealDBRecipe = dataStore.recipes[indexPath.row]
-        let apiRecipe = TheMealDBService.shared.convertToAPIRecipe(mealDBRecipe)
-        let recipe = RecipesAPIService.shared.convertToRecipe(apiRecipe)
-        
+        let recipe = convertToRecipe(mealDBRecipe)
         cell.configure(with: recipe)
-        
-        return cell
+    }
+    
+    private func convertToRecipe(_ mealDBRecipe: TheMealDBRecipe) -> Recipe {
+        let apiRecipe = TheMealDBService.shared.convertToAPIRecipe(mealDBRecipe)
+        return RecipesAPIService.shared.convertToRecipe(apiRecipe)
     }
 }
 
@@ -463,18 +463,33 @@ extension TheMealDBViewController: UICollectionViewDataSource {
             return UICollectionViewCell()
         }
         
-        if indexPath.item == 0 {
-            guard let dataStore = router?.dataStore else { return cell }
-            let isSelected = dataStore.selectedCategory == nil && 
-                           dataStore.selectedArea == nil && 
-                           dataStore.selectedIngredient == nil
-            cell.configure(with: "All Recipes", isSelected: isSelected)
-        } else {
-            let category = displayedCategories[indexPath.item - 1]
-            cell.configure(with: category.name, isSelected: category.isSelected)
-        }
-        
+        configureCategoryCell(cell, at: indexPath)
         return cell
+    }
+    
+    private func configureCategoryCell(_ cell: CategoryCollectionViewCell, at indexPath: IndexPath) {
+        if indexPath.item == 0 {
+            configureAllRecipesCell(cell)
+        } else {
+            configureCategoryItemCell(cell, at: indexPath)
+        }
+    }
+    
+    private func configureAllRecipesCell(_ cell: CategoryCollectionViewCell) {
+        guard let dataStore = router?.dataStore else { return }
+        let isSelected = isAllRecipesSelected(dataStore)
+        cell.configure(with: "All Recipes", isSelected: isSelected)
+    }
+    
+    private func isAllRecipesSelected(_ dataStore: TheMealDBDataStore) -> Bool {
+        return dataStore.selectedCategory == nil &&
+               dataStore.selectedArea == nil &&
+               dataStore.selectedIngredient == nil
+    }
+    
+    private func configureCategoryItemCell(_ cell: CategoryCollectionViewCell, at indexPath: IndexPath) {
+        let category = displayedCategories[indexPath.item - 1]
+        cell.configure(with: category.name, isSelected: category.isSelected)
     }
 }
 

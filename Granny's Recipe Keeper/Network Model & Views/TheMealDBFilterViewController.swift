@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol TheMealDBFilterViewControllerDelegate: AnyObject {
-    func didApplyMealDBFilters(selectedArea: AreaWithFlag?, selectedRegion: CuisineRegion?, selectedIngredient: TheMealDBIngredient?)
-}
-
 // Структура для категорий ингредиентов
 struct IngredientCategory {
     let name: String
@@ -40,18 +36,14 @@ class TheMealDBFilterViewController: UIViewController {
     private var isCountriesExpanded = true
     private var isRegionsExpanded = true
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
         tableView.separatorStyle = .none
         return tableView
     }()
     
-    // Collection view для стран
-    private lazy var countriesCollectionView: UICollectionView = {
+    private let countriesCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumInteritemSpacing = 12
@@ -62,15 +54,10 @@ class TheMealDBFilterViewController: UIViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.register(
-            CountryCollectionViewCell.self,
-            forCellWithReuseIdentifier: CountryCollectionViewCell.cellIdentifier
-        )
         return collectionView
     }()
     
-    // Collection view для регионов
-    private lazy var regionsCollectionView: UICollectionView = {
+    private let regionsCollectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .horizontal
         layout.minimumInteritemSpacing = 12
@@ -81,10 +68,6 @@ class TheMealDBFilterViewController: UIViewController {
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .clear
         collectionView.showsHorizontalScrollIndicator = false
-        collectionView.register(
-            CountryCollectionViewCell.self,
-            forCellWithReuseIdentifier: CountryCollectionViewCell.cellIdentifier
-        )
         return collectionView
     }()
     
@@ -95,10 +78,9 @@ class TheMealDBFilterViewController: UIViewController {
         self.selectedArea = selectedArea
         self.selectedIngredient = selectedIngredient
         
-        // Организуем ингредиенты по категориям
-        self.ingredientCategories = Self.organizeIngredientsIntoCategories(ingredients)
+        let categorizer = TheMealDBIngredientCategorizer()
+        self.ingredientCategories = categorizer.organizeIntoCategories(ingredients)
         
-        // Создаем регионы кухонь
         self.regions = Self.createCuisineRegions()
     }
     
@@ -152,87 +134,6 @@ class TheMealDBFilterViewController: UIViewController {
         ]
     }
     
-    private static func organizeIngredientsIntoCategories(_ ingredients: [TheMealDBIngredient]) -> [IngredientCategory] {
-        let meatPoultry = ["Chicken", "Beef", "Pork", "Lamb", "Turkey", "Duck", "Bacon", "Sausage"]
-        let fishSeafood = ["Salmon", "Tuna", "Cod", "Prawns", "Shrimp", "Crab", "Mussels"]
-        let vegetables = ["Tomato", "Onion", "Garlic", "Potato", "Carrot", "Broccoli", "Spinach",
-                         "Pepper", "Bell Pepper", "Mushroom", "Courgette", "Aubergine", "Cucumber",
-                         "Lettuce", "Cabbage", "Cauliflower", "Celery", "Leek", "Peas"]
-        let grainsLegumes = ["Rice", "Pasta", "Flour", "Lentils", "Chickpeas", "Beans", "Bread"]
-        let dairyProducts = ["Cheese", "Butter", "Milk", "Cream", "Yogurt", "Parmesan", "Mozzarella",
-                            "Cheddar Cheese", "Feta", "Cream Cheese"]
-        let spicesHerbs = ["Salt", "Black Pepper", "Paprika", "Cumin", "Coriander", "Basil",
-                          "Oregano", "Thyme", "Rosemary", "Parsley", "Mint", "Ginger", "Chili"]
-        let other = ["Egg", "Oil", "Olive Oil", "Vinegar", "Sugar", "Honey", "Lemon",
-                    "Lime", "Coconut Milk", "Soy Sauce", "Tomato Paste", "Stock"]
-        
-        var categories: [IngredientCategory] = []
-        
-        // Мясо и птица
-        let meatIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return meatPoultry.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !meatIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Meat & Poultry", ingredients: meatIngredients, isExpanded: true))
-        }
-        
-        // Рыба и морепродукты
-        let fishIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return fishSeafood.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !fishIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Fish & Seafood", ingredients: fishIngredients, isExpanded: true))
-        }
-        
-        // Овощи
-        let vegIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return vegetables.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !vegIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Vegetables", ingredients: vegIngredients, isExpanded: true))
-        }
-        
-        // Зерновые и бобовые
-        let grainIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return grainsLegumes.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !grainIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Grains & Legumes", ingredients: grainIngredients, isExpanded: true))
-        }
-        
-        // Молочные продукты
-        let dairyIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return dairyProducts.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !dairyIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Dairy Products", ingredients: dairyIngredients, isExpanded: true))
-        }
-        
-        // Специи и травы
-        let spiceIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return spicesHerbs.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !spiceIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Spices & Herbs", ingredients: spiceIngredients, isExpanded: true))
-        }
-        
-        // Другое
-        let otherIngredients = ingredients.filter { ingredient in
-            guard let name = ingredient.strIngredient else { return false }
-            return other.contains(name)
-        }.sorted { ($0.strIngredient ?? "") < ($1.strIngredient ?? "") }
-        if !otherIngredients.isEmpty {
-            categories.append(IngredientCategory(name: "Other Ingredients", ingredients: otherIngredients, isExpanded: true))
-        }
-        
-        return categories
-    }
     
     required init?(coder: NSCoder) {
         fatalError("init(coder:) has not been implemented")
@@ -242,8 +143,15 @@ class TheMealDBFilterViewController: UIViewController {
         super.viewDidLoad()
         setupView()
         setupNavigationBar()
-        setupLayout()
+        setupTableView()
         setupCollectionViews()
+        setupLayout()
+    }
+    
+    private func setupTableView() {
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
     }
     
     private func setupView() {
@@ -288,9 +196,17 @@ class TheMealDBFilterViewController: UIViewController {
     }
     
     private func setupCollectionViews() {
+        countriesCollectionView.register(
+            CountryCollectionViewCell.self,
+            forCellWithReuseIdentifier: CountryCollectionViewCell.cellIdentifier
+        )
         countriesCollectionView.dataSource = self
         countriesCollectionView.delegate = self
         
+        regionsCollectionView.register(
+            CountryCollectionViewCell.self,
+            forCellWithReuseIdentifier: CountryCollectionViewCell.cellIdentifier
+        )
         regionsCollectionView.dataSource = self
         regionsCollectionView.delegate = self
     }
@@ -618,7 +534,6 @@ extension TheMealDBFilterViewController: UICollectionViewDelegate {
     }
 }
 
-// MARK: - UICollectionViewDelegateFlowLayout
 extension TheMealDBFilterViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
         return CGSize(width: 80, height: 90)

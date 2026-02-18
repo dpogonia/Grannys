@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol CategoriesSelectionViewControllerDelegate: AnyObject {
-    func didAddRecipe()
-}
-
 class CategoriesSelectionViewController: UIViewController {
     
     var apiRecipe: APIRecipe?
@@ -21,10 +17,9 @@ class CategoriesSelectionViewController: UIViewController {
     
     private var selectedCategories: Set<UUID> = []
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView()
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
         return tableView
     }()
     
@@ -90,6 +85,7 @@ class CategoriesSelectionViewController: UIViewController {
     
     private func setupTableView() {
         view.addSubview(tableView)
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
         tableView.dataSource = self
         tableView.delegate = self
     }

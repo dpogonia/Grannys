@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol UnsplashImageSearchViewControllerDelegate: AnyObject {
-    func didSelectImage(image: UIImage, imageURL: String)
-}
-
 class UnsplashImageSearchViewController: UIViewController {
     
     weak var delegate: UnsplashImageSearchViewControllerDelegate?
@@ -24,7 +20,7 @@ class UnsplashImageSearchViewController: UIViewController {
         return searchBar
     }()
     
-    private lazy var collectionView: UICollectionView = {
+    private let collectionView: UICollectionView = {
         let layout = UICollectionViewFlowLayout()
         layout.scrollDirection = .vertical
         layout.minimumInteritemSpacing = 8
@@ -34,7 +30,6 @@ class UnsplashImageSearchViewController: UIViewController {
         let collectionView = UICollectionView(frame: .zero, collectionViewLayout: layout)
         collectionView.translatesAutoresizingMaskIntoConstraints = false
         collectionView.backgroundColor = .systemBackground
-        collectionView.register(UnsplashImageCell.self, forCellWithReuseIdentifier: "UnsplashImageCell")
         return collectionView
     }()
     
@@ -108,6 +103,7 @@ class UnsplashImageSearchViewController: UIViewController {
     }
     
     private func setupCollectionView() {
+        collectionView.register(UnsplashImageCell.self, forCellWithReuseIdentifier: "UnsplashImageCell")
         collectionView.dataSource = self
         collectionView.delegate = self
     }

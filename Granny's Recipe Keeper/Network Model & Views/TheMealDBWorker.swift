@@ -10,21 +10,6 @@ import Foundation
 // ДЗ CLEANSWIFT: Worker - выполняет сетевые запросы и другую работу
 // Worker инкапсулирует работу с сервисами и API
 
-protocol TheMealDBWorkerProtocol {
-    func fetchCategories(completion: @escaping (Result<[TheMealDBCategory], NetworkError>) -> Void)
-    func fetchAreas(completion: @escaping (Result<[AreaWithFlag], NetworkError>) -> Void)
-    func fetchIngredients(completion: @escaping (Result<[TheMealDBIngredient], NetworkError>) -> Void)
-    func fetchRandomRecipe(completion: @escaping (Result<TheMealDBRecipe, NetworkError>) -> Void)
-    func fetchRandomRecipes(count: Int, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void)
-    func fetchRecipesByCategory(_ category: String, offset: Int, limit: Int, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void)
-    func fetchRecipesByArea(_ area: String, offset: Int, limit: Int, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void)
-    func fetchRecipesByIngredient(_ ingredient: String, offset: Int, limit: Int, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void)
-    func fetchRecipesByRegion(_ region: CuisineRegion, limit: Int, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void)
-    func searchRecipesByName(_ query: String, completion: @escaping (Result<[TheMealDBRecipe], NetworkError>) -> Void)
-    func fetchCachedRecipes() -> [TheMealDBRecipe]?
-    func cacheRecipes(_ recipes: [TheMealDBRecipe])
-}
-
 class TheMealDBWorker: TheMealDBWorkerProtocol {
     
     private let service: TheMealDBService

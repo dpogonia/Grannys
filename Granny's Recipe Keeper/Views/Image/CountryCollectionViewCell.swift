@@ -5,11 +5,11 @@
 //  Created by Dmitrii Pogonia on 28.01.2026.
 //
 
-// ДОМАШНЕЕ ЗАДАНИЕ MOYA: UI для отображения данных из API
+// ДЗ MOYA: UI для отображения данных из API
 
 import UIKit
 
-/// ДОМАШНЕЕ ЗАДАНИЕ MOYA: Реализовано отображение данных - 40 баллов
+/// ДЗ MOYA: Реализовано отображение данных - 40 баллов
 /// Ячейка для отображения страны в коллекции
 class CountryCollectionViewCell: UICollectionViewCell {
     
@@ -102,8 +102,8 @@ class CountryCollectionViewCell: UICollectionViewCell {
         ])
     }
     
-    // ДОМАШНЕЕ ЗАДАНИЕ MOYA: Реализовано отображение данных - 40 баллов
-    /// Конфигурация для "All Countries" ячейки
+    // ДЗ MOYA: Реализовано отображение данных
+    // Конфигурация для "All Countries" ячейки
     func configureAsAllCountries(isSelected: Bool = false) {
         flagLabel.text = "🌍"
         nameLabel.text = "All Countries"
@@ -114,7 +114,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    /// Конфигурация с названием и флагом (универсальный метод)
+    // Конфигурация с названием и флагом (универсальный метод)
     func configure(name: String, flagEmoji: String, isSelected: Bool = false) {
         self.flagLabel.text = flagEmoji
         self.nameLabel.text = name
@@ -125,7 +125,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         }
     }
     
-    /// Конфигурация для регионов с emoji иконкой
+    // Конфигурация для регионов с emoji иконкой
     func configureWithEmoji(name: String, emoji: String, isSelected: Bool = false) {
         self.flagLabel.text = emoji
         self.nameLabel.text = name

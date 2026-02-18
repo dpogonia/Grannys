@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol FilterViewControllerDelegate: AnyObject {
-    func didApplyFilters(selectedTags: Set<String>, selectedDifficulty: String?, selectedIngredients: Set<String>)
-}
-
 class FilterViewController: UIViewController {
     
     weak var delegate: FilterViewControllerDelegate?
@@ -28,12 +24,9 @@ class FilterViewController: UIViewController {
     private var isTagsExpanded = false
     private var isIngredientsExpanded = false
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
         return tableView
     }()
     
@@ -87,9 +80,16 @@ class FilterViewController: UIViewController {
         super.viewDidLoad()
         setupView()
         setupNavigationBar()
+        setupTableView()
         loadAllTags()
         loadAllIngredients()
         setupLayout()
+    }
+    
+    private func setupTableView() {
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
     }
     
     private func setupView() {

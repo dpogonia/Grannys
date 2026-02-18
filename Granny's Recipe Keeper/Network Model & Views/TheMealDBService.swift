@@ -5,6 +5,8 @@
 //  Created by Dmitrii Pogonia on 17.12.2025.
 //
 
+// ДЗ Moya
+
 import Foundation
 
 class TheMealDBService {

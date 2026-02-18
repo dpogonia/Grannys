@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol RecipeEditViewControllerDelegate: AnyObject {
-    func didSaveRecipe()
-}
-
 class RecipeEditViewController: UIViewController {
 
     weak var delegate: RecipeEditViewControllerDelegate?
@@ -28,18 +24,9 @@ class RecipeEditViewController: UIViewController {
     private var isTagsExpanded = false
     private var isAdditionalExpanded = false
 
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.delegate = self
-        tableView.dataSource = self
-        tableView.register(RecipeEditNameCell.self, forCellReuseIdentifier: RecipeEditNameCell.identifier)
-        tableView.register(RecipeEditInstructionsCell.self, forCellReuseIdentifier: RecipeEditInstructionsCell.identifier)
-        tableView.register(RecipeEditPhotoCell.self, forCellReuseIdentifier: RecipeEditPhotoCell.identifier)
-        tableView.register(RecipeEditDifficultyCell.self, forCellReuseIdentifier: RecipeEditDifficultyCell.identifier)
-        tableView.register(RecipeEditNumericCell.self, forCellReuseIdentifier: RecipeEditNumericCell.identifier)
-        tableView.register(RecipeEditTagsCell.self, forCellReuseIdentifier: RecipeEditTagsCell.identifier)
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
         tableView.estimatedRowHeight = 44
         tableView.rowHeight = UITableView.automaticDimension
         return tableView
@@ -51,7 +38,7 @@ class RecipeEditViewController: UIViewController {
         return TagsManager.shared.getAllAvailableTags()
     }
 
-    private lazy var deleteButton: UIButton = {
+    private let deleteButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setTitle("Delete", for: .normal)
@@ -59,7 +46,6 @@ class RecipeEditViewController: UIViewController {
         button.setTitleColor(.white, for: .normal)
         button.backgroundColor = .systemRed
         button.layer.cornerRadius = 10
-        button.addTarget(self, action: #selector(didTapDeleteButton), for: .touchUpInside)
         return button
     }()
 
@@ -92,12 +78,30 @@ class RecipeEditViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        setupTableView()
+        setupDeleteButton()
         setupView()
         setupNavigationBar()
         loadCategories()
         loadRecipeData()
         setupLayout()
         setupKeyboardDismissal()
+    }
+    
+    private func setupTableView() {
+        tableView.delegate = self
+        tableView.dataSource = self
+        tableView.register(RecipeEditNameCell.self, forCellReuseIdentifier: RecipeEditNameCell.identifier)
+        tableView.register(RecipeEditInstructionsCell.self, forCellReuseIdentifier: RecipeEditInstructionsCell.identifier)
+        tableView.register(RecipeEditPhotoCell.self, forCellReuseIdentifier: RecipeEditPhotoCell.identifier)
+        tableView.register(RecipeEditDifficultyCell.self, forCellReuseIdentifier: RecipeEditDifficultyCell.identifier)
+        tableView.register(RecipeEditNumericCell.self, forCellReuseIdentifier: RecipeEditNumericCell.identifier)
+        tableView.register(RecipeEditTagsCell.self, forCellReuseIdentifier: RecipeEditTagsCell.identifier)
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+    }
+    
+    private func setupDeleteButton() {
+        deleteButton.addTarget(self, action: #selector(didTapDeleteButton), for: .touchUpInside)
     }
 
     private func setupKeyboardDismissal() {
@@ -215,94 +219,121 @@ class RecipeEditViewController: UIViewController {
     }
 
     @objc private func didTapSave() {
+        collectFormData()
+        
+        guard validateRecipeName() else {
+            return
+        }
+        
+        let recipeToSave = createRecipeToSave()
+        saveRecipe(recipeToSave)
+        navigateBack()
+    }
+    
+    private func collectFormData() {
+        collectBasicInfo()
+        collectExtraInfo()
+    }
+    
+    private func collectBasicInfo() {
         if let nameCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.basicInfo.rawValue)) as? RecipeEditNameCell {
             recipeName = nameCell.textField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         }
-
+        
         if let instructionsCell = tableView.cellForRow(at: IndexPath(row: 1, section: Section.basicInfo.rawValue)) as? RecipeEditInstructionsCell {
             recipeInstructions = instructionsCell.textView.text.trimmingCharacters(in: .whitespaces)
         }
-
-        // Считываем значения из числовых полей
+    }
+    
+    private func collectExtraInfo() {
         if let cookingTimeCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.extra.rawValue)) as? RecipeEditNumericCell {
             cookingTime = Int(cookingTimeCell.textField.text ?? "")
         }
-
+        
         if let servingsCell = tableView.cellForRow(at: IndexPath(row: 1, section: Section.extra.rawValue)) as? RecipeEditNumericCell {
             servings = Int(servingsCell.textField.text ?? "")
         }
-
+        
         if let caloriesCell = tableView.cellForRow(at: IndexPath(row: 2, section: Section.extra.rawValue)) as? RecipeEditNumericCell {
             calories = Int(caloriesCell.textField.text ?? "")
         }
-
+        
         if let difficultyCell = tableView.cellForRow(at: IndexPath(row: 3, section: Section.extra.rawValue)) as? RecipeEditDifficultyCell {
             difficultyValue = difficultyCell.segmentedControl.selectedSegmentIndex
         }
-
+    }
+    
+    private func validateRecipeName() -> Bool {
         guard !recipeName.isEmpty else {
             showAlert(title: "Error", message: "Enter recipe name")
-            return
+            return false
         }
-
-        let name = recipeName
-        let instructions = recipeInstructions
-
+        return true
+    }
+    
+    private func createRecipeToSave() -> Recipe {
         let categories = allCategories.filter { selectedCategories.contains($0.id) }
-
-        var difficulty: String?
-        switch difficultyValue {
-        case 0:
-            difficulty = "easy"
-        case 1:
-            difficulty = "medium"
-        case 2:
-            difficulty = "hard"
-        default:
-            difficulty = nil
-        }
-
+        let difficulty = convertDifficultyToString()
         let tags = Array(selectedTags)
-
-        let recipeToSave: Recipe
+        
         if let existingRecipe = recipe {
-            recipeToSave = Recipe(
-                id: existingRecipe.id,
-                name: name,
-                recipeInstructions: instructions.isEmpty ? nil : instructions,
-                imageData: imageData,
-                imageURL: imageURL,
-                ingredients: ingredients,
-                categories: categories,
-                isArchived: existingRecipe.isArchived,
-                isFavorite: existingRecipe.isFavorite,
-                createdAt: existingRecipe.createdAt,
-                cookingTime: cookingTime,
-                servings: servings,
-                difficulty: difficulty,
-                calories: calories,
-                tags: tags
-            )
+            return createUpdatedRecipe(from: existingRecipe, categories: categories, difficulty: difficulty, tags: tags)
         } else {
-            recipeToSave = Recipe(
-                name: name,
-                recipeInstructions: instructions.isEmpty ? nil : instructions,
-                imageData: imageData,
-                imageURL: imageURL,
-                ingredients: ingredients,
-                categories: categories,
-                cookingTime: cookingTime,
-                servings: servings,
-                difficulty: difficulty,
-                calories: calories,
-                tags: tags
-            )
+            return createNewRecipe(categories: categories, difficulty: difficulty, tags: tags)
         }
-
-        RecipesRepository.shared.saveRecipe(recipeToSave)
-
+    }
+    
+    private func convertDifficultyToString() -> String? {
+        switch difficultyValue {
+        case 0: return "easy"
+        case 1: return "medium"
+        case 2: return "hard"
+        default: return nil
+        }
+    }
+    
+    private func createUpdatedRecipe(from existingRecipe: Recipe, categories: [Category], difficulty: String?, tags: [String]) -> Recipe {
+        return Recipe(
+            id: existingRecipe.id,
+            name: recipeName,
+            recipeInstructions: recipeInstructions.isEmpty ? nil : recipeInstructions,
+            imageData: imageData,
+            imageURL: imageURL,
+            ingredients: ingredients,
+            categories: categories,
+            isArchived: existingRecipe.isArchived,
+            isFavorite: existingRecipe.isFavorite,
+            createdAt: existingRecipe.createdAt,
+            cookingTime: cookingTime,
+            servings: servings,
+            difficulty: difficulty,
+            calories: calories,
+            tags: tags
+        )
+    }
+    
+    private func createNewRecipe(categories: [Category], difficulty: String?, tags: [String]) -> Recipe {
+        return Recipe(
+            name: recipeName,
+            recipeInstructions: recipeInstructions.isEmpty ? nil : recipeInstructions,
+            imageData: imageData,
+            imageURL: imageURL,
+            ingredients: ingredients,
+            categories: categories,
+            cookingTime: cookingTime,
+            servings: servings,
+            difficulty: difficulty,
+            calories: calories,
+            tags: tags
+        )
+    }
+    
+    private func saveRecipe(_ recipe: Recipe) {
+        RecipesRepository.shared.saveRecipe(recipe)
         delegate?.didSaveRecipe()
-
+    }
+    
+    private func navigateBack() {
         navigationController?.popViewController(animated: true)
     }
 
@@ -335,42 +366,62 @@ class RecipeEditViewController: UIViewController {
     }
 
     private func presentImageSourceOptions(showDeleteOption: Bool, sourceView: UIView?) {
+        let alert = createImageSourceAlert(showDeleteOption: showDeleteOption)
+        configurePopoverPresentation(alert: alert, sourceView: sourceView)
+        present(alert, animated: true)
+    }
+    
+    private func createImageSourceAlert(showDeleteOption: Bool) -> UIAlertController {
         let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
-
-        if UIImagePickerController.isSourceTypeAvailable(.camera) {
-            alert.addAction(UIAlertAction(title: "Camera", style: .default) { [weak self] _ in
-                self?.presentImagePicker(sourceType: .camera)
-            })
+        
+        addCameraAction(to: alert)
+        addPhotoLibraryAction(to: alert)
+        addUnsplashSearchAction(to: alert)
+        
+        if showDeleteOption {
+            addDeletePhotoAction(to: alert)
         }
-
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        return alert
+    }
+    
+    private func addCameraAction(to alert: UIAlertController) {
+        guard UIImagePickerController.isSourceTypeAvailable(.camera) else { return }
+        alert.addAction(UIAlertAction(title: "Camera", style: .default) { [weak self] _ in
+            self?.presentImagePicker(sourceType: .camera)
+        })
+    }
+    
+    private func addPhotoLibraryAction(to alert: UIAlertController) {
         alert.addAction(UIAlertAction(title: "Photo Library", style: .default) { [weak self] _ in
             self?.presentImagePicker(sourceType: .photoLibrary)
         })
-
+    }
+    
+    private func addUnsplashSearchAction(to alert: UIAlertController) {
         alert.addAction(UIAlertAction(title: "Search Unsplash", style: .default) { [weak self] _ in
             self?.presentUnsplashSearch()
         })
-
-        if showDeleteOption {
-            alert.addAction(UIAlertAction(title: "Delete Photo", style: .destructive) { [weak self] _ in
-                self?.deletePhoto()
-            })
+    }
+    
+    private func addDeletePhotoAction(to alert: UIAlertController) {
+        alert.addAction(UIAlertAction(title: "Delete Photo", style: .destructive) { [weak self] _ in
+            self?.deletePhoto()
+        })
+    }
+    
+    private func configurePopoverPresentation(alert: UIAlertController, sourceView: UIView?) {
+        guard let popover = alert.popoverPresentationController else { return }
+        
+        if let sourceView = sourceView {
+            let rectInView = sourceView.convert(sourceView.bounds, to: view)
+            popover.sourceView = view
+            popover.sourceRect = rectInView
+        } else {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
         }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        if let popover = alert.popoverPresentationController {
-            if let sourceView = sourceView {
-                let rectInView = sourceView.convert(sourceView.bounds, to: view)
-                popover.sourceView = view
-                popover.sourceRect = rectInView
-            } else {
-                popover.sourceView = view
-                popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
-            }
-        }
-
-        present(alert, animated: true)
     }
 
     private func deletePhoto() {
@@ -981,88 +1032,131 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
 
     @objc private func handleLongPressOnTag(_ gesture: UILongPressGestureRecognizer) {
         guard gesture.state == .began else { return }
-
-        _ = gesture.location(in: tableView)
-        guard let tagsCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.tags.rawValue)) as? RecipeEditTagsCell else { return }
-
-        let collectionPoint = gesture.location(in: tagsCell.collectionView)
-        guard let indexPath = tagsCell.collectionView.indexPathForItem(at: collectionPoint) else { return }
-
-        let tag = availableTags[indexPath.item]
-
-        let isDefaultTag = TagsManager.shared.defaultTags.contains(tag)
-
-        let alert = UIAlertController(title: "Tag: \(tag)", message: nil, preferredStyle: .actionSheet)
-
-        if !isDefaultTag {
-            alert.addAction(UIAlertAction(title: "Edit", style: .default) { [weak self] _ in
-                self?.editTag(tag)
-            })
+        guard let (tag, indexPath, tagsCell) = getTagFromGesture(gesture) else { return }
+        
+        let alert = createTagActionAlert(for: tag, tagsCell: tagsCell, indexPath: indexPath)
+        present(alert, animated: true)
+    }
+    
+    private func getTagFromGesture(_ gesture: UILongPressGestureRecognizer) -> (String, IndexPath, RecipeEditTagsCell)? {
+        guard let tagsCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.tags.rawValue)) as? RecipeEditTagsCell else {
+            return nil
         }
-
+        
+        let collectionPoint = gesture.location(in: tagsCell.collectionView)
+        guard let indexPath = tagsCell.collectionView.indexPathForItem(at: collectionPoint) else {
+            return nil
+        }
+        
+        let tag = availableTags[indexPath.item]
+        return (tag, indexPath, tagsCell)
+    }
+    
+    private func createTagActionAlert(for tag: String, tagsCell: RecipeEditTagsCell, indexPath: IndexPath) -> UIAlertController {
+        let alert = UIAlertController(title: "Tag: \(tag)", message: nil, preferredStyle: .actionSheet)
+        let isDefaultTag = TagsManager.shared.defaultTags.contains(tag)
+        
+        addTagEditAction(to: alert, tag: tag, isDefaultTag: isDefaultTag)
+        addTagRemoveAction(to: alert, tag: tag, isDefaultTag: isDefaultTag)
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        
+        configureTagAlertPopover(alert: alert, tagsCell: tagsCell, indexPath: indexPath)
+        return alert
+    }
+    
+    private func addTagEditAction(to alert: UIAlertController, tag: String, isDefaultTag: Bool) {
+        guard !isDefaultTag else { return }
+        alert.addAction(UIAlertAction(title: "Edit", style: .default) { [weak self] _ in
+            self?.editTag(tag)
+        })
+    }
+    
+    private func addTagRemoveAction(to alert: UIAlertController, tag: String, isDefaultTag: Bool) {
         if isDefaultTag {
             alert.addAction(UIAlertAction(title: "Remove from Recipe", style: .destructive) { [weak self] _ in
-                guard let self = self else { return }
-                self.selectedTags.remove(tag)
-                self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
+                self?.removeTagFromRecipe(tag)
             })
         } else {
             alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-                guard let self = self else { return }
-                TagsManager.shared.deleteCustomTag(tag)
-                self.selectedTags.remove(tag)
-                self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
+                self?.deleteTag(tag)
             })
         }
-
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
-
-        if let popover = alert.popoverPresentationController {
-            let cell = tagsCell.collectionView.cellForItem(at: indexPath)
-            popover.sourceView = cell
-            popover.sourceRect = cell?.bounds ?? .zero
-        }
-
-        present(alert, animated: true)
+    }
+    
+    private func removeTagFromRecipe(_ tag: String) {
+        selectedTags.remove(tag)
+        tableView.reloadSections([Section.tags.rawValue], with: .automatic)
+    }
+    
+    private func deleteTag(_ tag: String) {
+        TagsManager.shared.deleteCustomTag(tag)
+        selectedTags.remove(tag)
+        tableView.reloadSections([Section.tags.rawValue], with: .automatic)
+    }
+    
+    private func configureTagAlertPopover(alert: UIAlertController, tagsCell: RecipeEditTagsCell, indexPath: IndexPath) {
+        guard let popover = alert.popoverPresentationController else { return }
+        let cell = tagsCell.collectionView.cellForItem(at: indexPath)
+        popover.sourceView = cell
+        popover.sourceRect = cell?.bounds ?? .zero
     }
 
     private func editTag(_ oldTag: String) {
+        let alert = createEditTagAlert(for: oldTag)
+        present(alert, animated: true)
+    }
+    
+    private func createEditTagAlert(for oldTag: String) -> UIAlertController {
         let alert = UIAlertController(title: "Edit Tag", message: "Enter new tag name", preferredStyle: .alert)
-
+        
         alert.addTextField { textField in
             textField.placeholder = "Tag name"
             textField.text = oldTag
         }
-
+        
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
-            guard let self = self,
-                  let textField = alert.textFields?.first,
-                  let newName = textField.text?.trimmingCharacters(in: .whitespaces),
-                  !newName.isEmpty,
-                  newName != oldTag else {
-                return
-            }
-
-            let tagExists = self.availableTags.contains(where: { $0.lowercased() == newName.lowercased() && $0 != oldTag })
-
-            if !tagExists {
-                TagsManager.shared.renameTag(oldName: oldTag, newName: newName)
-
-                if self.selectedTags.contains(oldTag) {
-                    self.selectedTags.remove(oldTag)
-                    self.selectedTags.insert(newName)
-                }
-
-                self.tableView.reloadSections([Section.tags.rawValue], with: .automatic)
-            } else {
-                let errorAlert = UIAlertController(title: "Error", message: "Tag \"\(newName)\" already exists", preferredStyle: .alert)
-                errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
-                self.present(errorAlert, animated: true)
-            }
+            self?.handleTagRename(from: alert, oldTag: oldTag)
         })
-
-        present(alert, animated: true)
+        
+        return alert
+    }
+    
+    private func handleTagRename(from alert: UIAlertController, oldTag: String) {
+        guard let textField = alert.textFields?.first,
+              let newName = textField.text?.trimmingCharacters(in: .whitespaces),
+              !newName.isEmpty,
+              newName != oldTag else {
+            return
+        }
+        
+        guard !isTagNameExists(newName, excluding: oldTag) else {
+            showTagExistsError(for: newName)
+            return
+        }
+        
+        renameTag(from: oldTag, to: newName)
+    }
+    
+    private func isTagNameExists(_ name: String, excluding excludedTag: String) -> Bool {
+        return availableTags.contains(where: { $0.lowercased() == name.lowercased() && $0 != excludedTag })
+    }
+    
+    private func showTagExistsError(for tagName: String) {
+        let errorAlert = UIAlertController(title: "Error", message: "Tag \"\(tagName)\" already exists", preferredStyle: .alert)
+        errorAlert.addAction(UIAlertAction(title: "OK", style: .default))
+        present(errorAlert, animated: true)
+    }
+    
+    private func renameTag(from oldTag: String, to newName: String) {
+        TagsManager.shared.renameTag(oldName: oldTag, newName: newName)
+        
+        if selectedTags.contains(oldTag) {
+            selectedTags.remove(oldTag)
+            selectedTags.insert(newName)
+        }
+        
+        tableView.reloadSections([Section.tags.rawValue], with: .automatic)
     }
 }
 

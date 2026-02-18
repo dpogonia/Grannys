@@ -7,10 +7,6 @@
 
 import UIKit
 
-protocol CategoriesViewControllerDelegate: AnyObject {
-    func didSelectCategory(_ category: Category?)
-}
-
 class CategoriesViewController: UIViewController {
     
     weak var delegate: CategoriesViewControllerDelegate?
@@ -49,10 +45,9 @@ class CategoriesViewController: UIViewController {
         case specialCategories = 3
     }
     
-    private lazy var tableView: UITableView = {
+    private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
         tableView.translatesAutoresizingMaskIntoConstraints = false
-        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
         return tableView
     }()
     
@@ -65,6 +60,14 @@ class CategoriesViewController: UIViewController {
         setupConstraints()
         setupNavigationBar()
     }
+    
+    private func setupTableView() {
+        tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
+        tableView.dataSource = self
+        tableView.delegate = self
+        view.addSubview(tableView)
+    }
+    
     
     private func setupView() {
         view.backgroundColor = .systemBackground
@@ -238,7 +241,7 @@ class CategoriesViewController: UIViewController {
         }
     }
     
-    private func setupTableView() {
+    private func setupTableViewConstraints() {
         view.addSubview(tableView)
         tableView.dataSource = self
         tableView.delegate = self

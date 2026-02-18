@@ -7,11 +7,6 @@
 
 import UIKit
 
-protocol RecipeDetailViewControllerDelegate: AnyObject {
-    func didUpdateRecipe()
-    func didDeleteRecipe()
-}
-
 class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, RecipeImageLoadable {
 
     private var recipe: Recipe
@@ -135,7 +130,7 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         return stackView
     }()
 
-    private lazy var cameraButton: UIButton = {
+    private let cameraButton: UIButton = {
         let button = UIButton(type: .system)
         button.translatesAutoresizingMaskIntoConstraints = false
         button.setImage(UIImage(systemName: "camera.fill"), for: .normal)
@@ -143,7 +138,6 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         button.backgroundColor = .systemBlue
         button.tintColor = .white
         button.layer.cornerRadius = 20
-        button.addTarget(self, action: #selector(didTapCameraButton), for: .touchUpInside)
         return button
     }()
 
@@ -160,8 +154,20 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         super.viewDidLoad()
         setupView()
         setupNavigationBar()
+        setupCameraButton()
         setupLayout()
         configure()
+    }
+    
+    private func setupCameraButton() {
+        cameraButton.addTarget(self, action: #selector(didTapCameraButton), for: .touchUpInside)
+    }
+    
+    private func setupFavoriteButton() {
+        favoriteButton.image = UIImage(systemName: recipe.isFavorite ? "heart.fill" : "heart")
+        favoriteButton.tintColor = recipe.isFavorite ? .systemRed : .label
+        favoriteButton.target = self
+        favoriteButton.action = #selector(didTapFavoriteButton)
     }
 
     @objc private func didTapCameraButton() {
@@ -276,25 +282,20 @@ class RecipeDetailViewController: UIViewController, RecipeInfoDisplayable, Recip
         title = ""
     }
 
-    private lazy var favoriteButton: UIBarButtonItem = {
-        let button = UIBarButtonItem(
-            image: UIImage(systemName: recipe.isFavorite ? "heart.fill" : "heart"),
-            style: .plain,
-            target: self,
-            action: #selector(didTapFavoriteButton)
-        )
-        button.tintColor = recipe.isFavorite ? .systemRed : .label
-        return button
+    private let favoriteButton: UIBarButtonItem = {
+        return UIBarButtonItem(image: nil, style: .plain, target: nil, action: nil)
     }()
 
     private func setupNavigationBar() {
+        setupFavoriteButton()
+        
         let copyButton = UIBarButtonItem(
             image: UIImage(systemName: "doc.on.doc"),
             style: .plain,
             target: self,
             action: #selector(didTapCopyRecipeButton)
         )
-
+        
         let editButton = UIBarButtonItem(
             image: UIImage(systemName: "pencil"),
             style: .plain,
