@@ -2,12 +2,9 @@
 //  TheMealDBInteractor.swift
 //  Granny's Recipe Keeper
 //
-//  Created for CleanSwift (VIP) Architecture
-//
 
 import Foundation
 
-// ДЗ CLEANSWIFT: Interactor - бизнес-логика приложения
 // Interactor получает запросы от ViewController, обрабатывает их через Worker,
 // и отправляет результаты в Presenter
 
@@ -172,7 +169,8 @@ class TheMealDBInteractor: TheMealDBBusinessLogic, TheMealDBDataStore {
     }
     
     private func sortCategories(_ categories: [TheMealDBCategory]) -> [TheMealDBCategory] {
-        let customOrder = ["Starter", "Salad", "Breakfast", "Main", "Seafood", "Side", "Beverage", "Dessert", "Vegan", "Miscellaneous"]
+        // Порядок: сначала десерты, затем гарниры и остальные
+        let customOrder = ["Dessert", "Side", "Starter", "Salad", "Breakfast", "Main", "Seafood", "Beverage", "Vegan", "Miscellaneous"]
         
         return categories.sorted { cat1, cat2 in
             let name1 = cat1.strCategory ?? ""

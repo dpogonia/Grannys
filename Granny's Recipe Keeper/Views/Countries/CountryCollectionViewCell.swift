@@ -48,7 +48,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
     private lazy var selectionIndicator: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = .grannyPink
         view.layer.cornerRadius = 2
         view.alpha = 0
         return view
@@ -92,7 +92,8 @@ class CountryCollectionViewCell: UICollectionViewCell {
             nameLabel.topAnchor.constraint(equalTo: flagLabel.bottomAnchor, constant: 4),
             nameLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 4),
             nameLabel.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -4),
-            nameLabel.bottomAnchor.constraint(lessThanOrEqualTo: containerView.bottomAnchor, constant: -8),
+            // Фиксируем нижний отступ, чтобы все подписи были на одной линии
+            nameLabel.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -8),
             
             selectionIndicator.bottomAnchor.constraint(equalTo: containerView.bottomAnchor),
             selectionIndicator.leadingAnchor.constraint(equalTo: containerView.leadingAnchor),
@@ -108,7 +109,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         
         UIView.animate(withDuration: 0.2) {
             self.selectionIndicator.alpha = isSelected ? 1.0 : 0
-            self.containerView.backgroundColor = isSelected ? UIColor.systemBlue.withAlphaComponent(0.1) : .systemBackground
+            self.containerView.backgroundColor = isSelected ? UIColor.grannyPink.withAlphaComponent(0.1) : .systemBackground
         }
     }
     
@@ -119,7 +120,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         
         UIView.animate(withDuration: 0.2) {
             self.selectionIndicator.alpha = isSelected ? 1.0 : 0
-            self.containerView.backgroundColor = isSelected ? UIColor.systemBlue.withAlphaComponent(0.1) : .systemBackground
+            self.containerView.backgroundColor = isSelected ? UIColor.grannyPink.withAlphaComponent(0.1) : .systemBackground
         }
     }
     
@@ -130,7 +131,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         
         UIView.animate(withDuration: 0.2) {
             self.selectionIndicator.alpha = isSelected ? 1.0 : 0
-            self.containerView.backgroundColor = isSelected ? UIColor.systemBlue.withAlphaComponent(0.1) : .systemBackground
+            self.containerView.backgroundColor = isSelected ? UIColor.grannyPink.withAlphaComponent(0.1) : .systemBackground
         }
     }
 }

@@ -14,12 +14,15 @@ class RecipeEditViewController: UIViewController {
     private var recipe: Recipe?
 
     private var ingredients: [Ingredient] = []
+    private var sources: [String] = []
 
     private var selectedCategories: Set<UUID> = []
     private var allCategories: [Category] = []
 
     private var isPhotoExpanded = false
-    private var isIngredientsExpanded = false
+    private var isIngredientsExpanded = true
+    private var isSourcesExpanded = false
+    private var isInstructionsExpanded = true
     private var isCategoriesExpanded = false
     private var isTagsExpanded = false
     private var isAdditionalExpanded = false
@@ -33,10 +36,15 @@ class RecipeEditViewController: UIViewController {
     }()
 
     private var selectedTags: Set<String> = []
-
+    
     private var availableTags: [String] {
         return TagsManager.shared.getAllAvailableTags()
     }
+    
+    private var initialCustomTags: [String] = []
+    private var initialDeletedTags: Set<String> = []
+    private var didSaveChanges = false
+    private var renamedTagsDuringSession: [(oldName: String, newName: String)] = []
 
     private let deleteButton: UIButton = {
         let button = UIButton(type: .system)
@@ -57,14 +65,20 @@ class RecipeEditViewController: UIViewController {
     private var cookingTime: Int?
     private var servings: Int?
     private var calories: Int?
+    
+    private let difficultyOptions = ["Easy", "Medium", "Hard"]
+    private let difficultyPicker = UIPickerView()
+    private let difficultyPickerTextField = UITextField(frame: .zero)
 
     private enum Section: Int, CaseIterable {
-        case basicInfo = 0
-        case photo = 1
+        case basicInfo = 0      // Recipe title
+        case instructions = 1
         case ingredients = 2
-        case extra = 3
-        case categories = 4
-        case tags = 5
+        case photo = 3
+        case extra = 4
+        case sources = 5
+        case categories = 6
+        case tags = 7
     }
 
     init(recipe: Recipe? = nil) {
@@ -78,6 +92,10 @@ class RecipeEditViewController: UIViewController {
 
     override func viewDidLoad() {
         super.viewDidLoad()
+        
+        initialCustomTags = TagsManager.shared.getCustomTags()
+        initialDeletedTags = TagsManager.shared.getDeletedTags()
+        
         setupTableView()
         setupDeleteButton()
         setupView()
@@ -86,6 +104,18 @@ class RecipeEditViewController: UIViewController {
         loadRecipeData()
         setupLayout()
         setupKeyboardDismissal()
+        setupDifficultyPicker()
+    }
+    
+    override func viewWillDisappear(_ animated: Bool) {
+        super.viewWillDisappear(animated)
+        
+        if isMovingFromParent && !didSaveChanges {
+            for change in renamedTagsDuringSession {
+                TagsManager.shared.renameTag(oldName: change.newName, newName: change.oldName)
+            }
+            TagsManager.shared.restoreState(customTags: initialCustomTags, deletedTags: initialDeletedTags)
+        }
     }
     
     private func setupTableView() {
@@ -96,8 +126,11 @@ class RecipeEditViewController: UIViewController {
         tableView.register(RecipeEditPhotoCell.self, forCellReuseIdentifier: RecipeEditPhotoCell.identifier)
         tableView.register(RecipeEditDifficultyCell.self, forCellReuseIdentifier: RecipeEditDifficultyCell.identifier)
         tableView.register(RecipeEditNumericCell.self, forCellReuseIdentifier: RecipeEditNumericCell.identifier)
+        tableView.register(RecipeEditStepperCell.self, forCellReuseIdentifier: RecipeEditStepperCell.identifier)
         tableView.register(RecipeEditTagsCell.self, forCellReuseIdentifier: RecipeEditTagsCell.identifier)
+        tableView.register(RecipeEditIngredientInputCell.self, forCellReuseIdentifier: RecipeEditIngredientInputCell.identifier)
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        tableView.tintColor = .grannyPink
     }
     
     private func setupDeleteButton() {
@@ -108,6 +141,31 @@ class RecipeEditViewController: UIViewController {
         let tapGesture = UITapGestureRecognizer(target: self, action: #selector(dismissKeyboard))
         tapGesture.cancelsTouchesInView = false
         tableView.addGestureRecognizer(tapGesture)
+    }
+
+    private func setupDifficultyPicker() {
+        difficultyPicker.dataSource = self
+        difficultyPicker.delegate = self
+        
+        if difficultyValue != UISegmentedControl.noSegment,
+           difficultyValue >= 0,
+           difficultyValue < difficultyOptions.count {
+            difficultyPicker.selectRow(difficultyValue, inComponent: 0, animated: false)
+        }
+        
+        difficultyPickerTextField.inputView = difficultyPicker
+        
+        let toolbar = UIToolbar()
+        toolbar.sizeToFit()
+        let cancelItem = UIBarButtonItem(title: "Cancel", style: .plain, target: self, action: #selector(cancelDifficultySelection))
+        let flexItem = UIBarButtonItem(barButtonSystemItem: .flexibleSpace, target: nil, action: nil)
+        let doneItem = UIBarButtonItem(title: "Done", style: .done, target: self, action: #selector(applyDifficultySelection))
+        toolbar.items = [cancelItem, flexItem, doneItem]
+        difficultyPickerTextField.inputAccessoryView = toolbar
+        
+        difficultyPickerTextField.translatesAutoresizingMaskIntoConstraints = false
+        difficultyPickerTextField.isHidden = true
+        view.addSubview(difficultyPickerTextField)
     }
 
     @objc private func dismissKeyboard() {
@@ -145,6 +203,7 @@ class RecipeEditViewController: UIViewController {
             target: self,
             action: #selector(didTapSave)
         )
+        saveButton.tintColor = .grannyPink
         navigationItem.rightBarButtonItem = saveButton
     }
 
@@ -157,6 +216,7 @@ class RecipeEditViewController: UIViewController {
             recipeName = recipe.name
             recipeInstructions = recipe.recipeInstructions ?? ""
             ingredients = recipe.ingredients
+            sources = recipe.sources
             selectedCategories = Set(recipe.categories.map { $0.id })
             imageData = recipe.imageData
             imageURL = recipe.imageURL
@@ -227,12 +287,16 @@ class RecipeEditViewController: UIViewController {
         
         let recipeToSave = createRecipeToSave()
         saveRecipe(recipeToSave)
+        didSaveChanges = true
         navigateBack()
     }
     
     private func collectFormData() {
         collectBasicInfo()
         collectExtraInfo()
+        
+        // Удаляем пустые ингредиенты перед сохранением
+        ingredients = ingredients.filter { !$0.name.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty }
     }
     
     private func collectBasicInfo() {
@@ -240,27 +304,13 @@ class RecipeEditViewController: UIViewController {
             recipeName = nameCell.textField.text?.trimmingCharacters(in: .whitespaces) ?? ""
         }
         
-        if let instructionsCell = tableView.cellForRow(at: IndexPath(row: 1, section: Section.basicInfo.rawValue)) as? RecipeEditInstructionsCell {
+        if let instructionsCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.instructions.rawValue)) as? RecipeEditInstructionsCell {
             recipeInstructions = instructionsCell.textView.text.trimmingCharacters(in: .whitespaces)
         }
     }
     
     private func collectExtraInfo() {
-        if let cookingTimeCell = tableView.cellForRow(at: IndexPath(row: 0, section: Section.extra.rawValue)) as? RecipeEditNumericCell {
-            cookingTime = Int(cookingTimeCell.textField.text ?? "")
-        }
-        
-        if let servingsCell = tableView.cellForRow(at: IndexPath(row: 1, section: Section.extra.rawValue)) as? RecipeEditNumericCell {
-            servings = Int(servingsCell.textField.text ?? "")
-        }
-        
-        if let caloriesCell = tableView.cellForRow(at: IndexPath(row: 2, section: Section.extra.rawValue)) as? RecipeEditNumericCell {
-            calories = Int(caloriesCell.textField.text ?? "")
-        }
-        
-        if let difficultyCell = tableView.cellForRow(at: IndexPath(row: 3, section: Section.extra.rawValue)) as? RecipeEditDifficultyCell {
-            difficultyValue = difficultyCell.segmentedControl.selectedSegmentIndex
-        }
+        // Values are updated live from stepper and numeric cells via onValueChanged / editingChanged handlers.
     }
     
     private func validateRecipeName() -> Bool {
@@ -308,7 +358,8 @@ class RecipeEditViewController: UIViewController {
             servings: servings,
             difficulty: difficulty,
             calories: calories,
-            tags: tags
+            tags: tags,
+            sources: sources
         )
     }
     
@@ -324,7 +375,8 @@ class RecipeEditViewController: UIViewController {
             servings: servings,
             difficulty: difficulty,
             calories: calories,
-            tags: tags
+            tags: tags,
+            sources: sources
         )
     }
     
@@ -367,12 +419,13 @@ class RecipeEditViewController: UIViewController {
 
     private func presentImageSourceOptions(showDeleteOption: Bool, sourceView: UIView?) {
         let alert = createImageSourceAlert(showDeleteOption: showDeleteOption)
-        configurePopoverPresentation(alert: alert, sourceView: sourceView)
+        // Для единообразия показываем диалог по центру экрана (стиль .alert),
+        // поэтому привязка к sourceView больше не нужна.
         present(alert, animated: true)
     }
     
     private func createImageSourceAlert(showDeleteOption: Bool) -> UIAlertController {
-        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .actionSheet)
+        let alert = UIAlertController(title: nil, message: nil, preferredStyle: .alert)
         
         addCameraAction(to: alert)
         addPhotoLibraryAction(to: alert)
@@ -594,6 +647,62 @@ class RecipeEditViewController: UIViewController {
     private var hasPhoto: Bool {
         return imageData != nil || imageURL != nil
     }
+    
+    private func presentAddSourceAlert() {
+        let alert = UIAlertController(title: "New Source", message: "Enter YouTube or other source URL", preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.placeholder = "https://www.youtube.com/..."
+            textField.keyboardType = .URL
+            textField.autocapitalizationType = .none
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Add", style: .default) { [weak self] _ in
+            guard let self = self,
+                  let text = alert.textFields?.first?.text?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty else {
+                return
+            }
+            
+            if !self.sources.contains(text) {
+                self.sources.append(text)
+                self.tableView.reloadSections([Section.sources.rawValue], with: .automatic)
+            }
+        })
+        
+        present(alert, animated: true)
+    }
+    
+    private func presentEditSourceAlert(at index: Int) {
+        guard index < sources.count else { return }
+        let current = sources[index]
+        
+        let alert = UIAlertController(title: "Edit Source", message: nil, preferredStyle: .alert)
+        
+        alert.addTextField { textField in
+            textField.placeholder = "https://www.youtube.com/..."
+            textField.text = current
+            textField.keyboardType = .URL
+            textField.autocapitalizationType = .none
+        }
+        
+        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
+        alert.addAction(UIAlertAction(title: "Save", style: .default) { [weak self] _ in
+            guard let self = self,
+                  let text = alert.textFields?.first?.text?
+                    .trimmingCharacters(in: .whitespacesAndNewlines),
+                  !text.isEmpty else {
+                return
+            }
+            
+            self.sources[index] = text
+            self.tableView.reloadSections([Section.sources.rawValue], with: .automatic)
+        })
+        
+        present(alert, animated: true)
+    }
 }
 
 extension RecipeEditViewController: UITableViewDataSource {
@@ -606,11 +715,15 @@ extension RecipeEditViewController: UITableViewDataSource {
 
         switch sectionType {
         case .basicInfo:
-            return 2
-        case .photo:
-            return isPhotoExpanded ? 1 : 0
+            return 1
         case .ingredients:
             return isIngredientsExpanded ? ingredients.count + 1 : 0
+        case .sources:
+            return isSourcesExpanded ? sources.count + 1 : 0
+        case .instructions:
+            return isInstructionsExpanded ? 1 : 0
+        case .photo:
+            return isPhotoExpanded ? 1 : 0
         case .extra:
             return isAdditionalExpanded ? 4 : 0
         case .categories:
@@ -627,6 +740,10 @@ extension RecipeEditViewController: UITableViewDataSource {
     func tableView(_ tableView: UITableView, viewForHeaderInSection section: Int) -> UIView? {
         guard let sectionType = Section(rawValue: section) else { return nil }
 
+        if sectionType == .basicInfo {
+            return nil
+        }
+
         let headerView = UIView()
         headerView.backgroundColor = .clear
 
@@ -638,8 +755,7 @@ extension RecipeEditViewController: UITableViewDataSource {
 
         switch sectionType {
         case .basicInfo:
-            titleLabel.text = "Recipe"
-            titleLabel.font = .systemFont(ofSize: 18, weight: .bold)
+            titleLabel.text = nil
         case .photo:
             titleLabel.text = "Photo"
             titleLabel.font = .systemFont(ofSize: 18, weight: .heavy)
@@ -649,6 +765,16 @@ extension RecipeEditViewController: UITableViewDataSource {
             titleLabel.text = "Ingredients"
             titleLabel.font = .systemFont(ofSize: 18, weight: .heavy)
             isExpanded = isIngredientsExpanded
+            showChevron = true
+        case .sources:
+            titleLabel.text = "Sources"
+            titleLabel.font = .systemFont(ofSize: 18, weight: .heavy)
+            isExpanded = isSourcesExpanded
+            showChevron = true
+        case .instructions:
+            titleLabel.text = "Cooking instructions"
+            titleLabel.font = .systemFont(ofSize: 18, weight: .heavy)
+            isExpanded = isInstructionsExpanded
             showChevron = true
         case .extra:
             titleLabel.text = "Extra"
@@ -667,30 +793,34 @@ extension RecipeEditViewController: UITableViewDataSource {
             showChevron = true
         }
 
-        headerView.addSubview(titleLabel)
-        titleLabel.translatesAutoresizingMaskIntoConstraints = false
-
         if showChevron {
-            let chevronLabel = UILabel()
-            chevronLabel.text = isExpanded ? "▼" : "▶"
-            chevronLabel.font = .systemFont(ofSize: 12)
-            chevronLabel.textColor = .secondaryLabel
+            let chevronImageView = UIImageView()
+            chevronImageView.translatesAutoresizingMaskIntoConstraints = false
+            chevronImageView.tintColor = .grannyPink
+            let systemName = isExpanded ? "chevron.down" : "chevron.right"
+            chevronImageView.image = UIImage(systemName: systemName)
+            chevronImageView.contentMode = .scaleAspectFit
 
-            headerView.addSubview(chevronLabel)
-            chevronLabel.translatesAutoresizingMaskIntoConstraints = false
+            headerView.addSubview(titleLabel)
+            headerView.addSubview(chevronImageView)
+            titleLabel.translatesAutoresizingMaskIntoConstraints = false
 
             NSLayoutConstraint.activate([
                 titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
                 titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
 
-                chevronLabel.leadingAnchor.constraint(equalTo: titleLabel.trailingAnchor, constant: 8),
-                chevronLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
+                chevronImageView.trailingAnchor.constraint(equalTo: headerView.trailingAnchor, constant: -16),
+                chevronImageView.centerYAnchor.constraint(equalTo: headerView.centerYAnchor),
+                chevronImageView.widthAnchor.constraint(equalToConstant: 10),
+                chevronImageView.heightAnchor.constraint(equalToConstant: 16)
             ])
 
             let tapGesture = UITapGestureRecognizer(target: self, action: #selector(didTapSectionHeader(_:)))
             headerView.addGestureRecognizer(tapGesture)
             headerView.tag = section
         } else {
+            headerView.addSubview(titleLabel)
+            titleLabel.translatesAutoresizingMaskIntoConstraints = false
             NSLayoutConstraint.activate([
                 titleLabel.leadingAnchor.constraint(equalTo: headerView.leadingAnchor, constant: 16),
                 titleLabel.centerYAnchor.constraint(equalTo: headerView.centerYAnchor)
@@ -701,7 +831,8 @@ extension RecipeEditViewController: UITableViewDataSource {
     }
 
     func tableView(_ tableView: UITableView, heightForHeaderInSection section: Int) -> CGFloat {
-        return 40
+        guard let sectionType = Section(rawValue: section) else { return 0 }
+        return sectionType == .basicInfo ? 0.01 : 40
     }
 
     @objc private func didTapSectionHeader(_ gesture: UITapGestureRecognizer) {
@@ -713,6 +844,10 @@ extension RecipeEditViewController: UITableViewDataSource {
             isPhotoExpanded.toggle()
         case .ingredients:
             isIngredientsExpanded.toggle()
+        case .sources:
+            isSourcesExpanded.toggle()
+        case .instructions:
+            isInstructionsExpanded.toggle()
         case .extra:
             isAdditionalExpanded.toggle()
         case .categories:
@@ -738,6 +873,10 @@ extension RecipeEditViewController: UITableViewDataSource {
             return cellForPhotoSection(at: indexPath, in: tableView)
         case .ingredients:
             return cellForIngredientsSection(at: indexPath, in: tableView)
+        case .sources:
+            return cellForSourcesSection(at: indexPath, in: tableView)
+        case .instructions:
+            return cellForInstructionsSection(at: indexPath, in: tableView)
         case .extra:
             return cellForExtraSection(at: indexPath, in: tableView)
         case .categories:
@@ -748,18 +887,18 @@ extension RecipeEditViewController: UITableViewDataSource {
     }
 
     private func cellForBasicInfoSection(at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
-        if indexPath.row == 0 {
-            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditNameCell.identifier, for: indexPath) as! RecipeEditNameCell
-            cell.textField.text = recipeName
-            cell.textField.addTarget(self, action: #selector(nameTextFieldDidChange(_:)), for: .editingChanged)
-            return cell
-        } else {
-            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditInstructionsCell.identifier, for: indexPath) as! RecipeEditInstructionsCell
-            cell.textView.text = recipeInstructions
-            cell.updatePlaceholder()
-            cell.textView.delegate = self
-            return cell
-        }
+        let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditNameCell.identifier, for: indexPath) as! RecipeEditNameCell
+        cell.textField.text = recipeName
+        cell.textField.addTarget(self, action: #selector(nameTextFieldDidChange(_:)), for: .editingChanged)
+        return cell
+    }
+
+    private func cellForInstructionsSection(at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditInstructionsCell.identifier, for: indexPath) as! RecipeEditInstructionsCell
+        cell.textView.text = recipeInstructions
+        cell.updatePlaceholder()
+        cell.textView.delegate = self
+        return cell
     }
 
     private func cellForPhotoSection(at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
@@ -794,47 +933,69 @@ extension RecipeEditViewController: UITableViewDataSource {
     }
 
     private func cellForIngredientsSection(at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
-        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
         if indexPath.row < ingredients.count {
+            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditIngredientInputCell.identifier, for: indexPath) as! RecipeEditIngredientInputCell
             let ingredient = ingredients[indexPath.row]
-            cell.textLabel?.text = ingredient.displayText
-            cell.textLabel?.textColor = .label
-            cell.textLabel?.font = .systemFont(ofSize: 17)
-            cell.accessoryType = .disclosureIndicator
-            cell.selectionStyle = .default
-        } else {
-            cell.textLabel?.text = "+ Add Ingredient"
-            cell.textLabel?.textColor = .systemBlue
-            cell.textLabel?.font = .systemFont(ofSize: 17)
+            cell.configure(name: ingredient.name, amount: ingredient.amount)
+            cell.selectionStyle = .none
             cell.accessoryType = .none
+            cell.delegate = self
+            return cell
+        } else {
+            let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+            cell.textLabel?.text = "+ Add Ingredient"
+            cell.textLabel?.textColor = .grannyPink
+            cell.textLabel?.font = .systemFont(ofSize: 17)
             cell.selectionStyle = .default
+            cell.accessoryType = .none
+            return cell
+        }
+    }
+
+    private func cellForSourcesSection(at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
+        let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
+        if indexPath.row < sources.count {
+            let source = sources[indexPath.row]
+            cell.textLabel?.text = source
+            cell.textLabel?.textColor = .link
+            cell.textLabel?.font = .systemFont(ofSize: 15)
+            cell.selectionStyle = .default
+            cell.accessoryType = .none
+        } else {
+            cell.textLabel?.text = "+ Add Source"
+            cell.textLabel?.textColor = .grannyPink
+            cell.textLabel?.font = .systemFont(ofSize: 17)
+            cell.selectionStyle = .default
+            cell.accessoryType = .none
         }
         return cell
     }
 
     private func cellForExtraSection(at indexPath: IndexPath, in tableView: UITableView) -> UITableViewCell {
         if indexPath.row == 0 {
-            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditNumericCell.identifier, for: indexPath) as! RecipeEditNumericCell
-            cell.configure(title: "Cooking Time", value: cookingTime, suffix: "min", placeholder: "—")
-            cell.textField.tag = 100
-            cell.textField.addTarget(self, action: #selector(numericFieldDidChange(_:)), for: .editingChanged)
+            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditStepperCell.identifier, for: indexPath) as! RecipeEditStepperCell
+            cell.configure(title: "Cooking time", value: cookingTime, unit: "min", step: 5, minValue: 0, maxValue: 600)
+            cell.onValueChanged = { [weak self] newValue in
+                self?.cookingTime = newValue == 0 ? nil : newValue
+            }
             return cell
         } else if indexPath.row == 1 {
-            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditNumericCell.identifier, for: indexPath) as! RecipeEditNumericCell
-            cell.configure(title: "Servings", value: servings, suffix: "servings", placeholder: "—")
-            cell.textField.tag = 101
-            cell.textField.addTarget(self, action: #selector(numericFieldDidChange(_:)), for: .editingChanged)
+            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditStepperCell.identifier, for: indexPath) as! RecipeEditStepperCell
+            cell.configure(title: "Servings", value: servings, unit: nil, step: 1, minValue: 0, maxValue: 50)
+            cell.onValueChanged = { [weak self] newValue in
+                self?.servings = newValue == 0 ? nil : newValue
+            }
             return cell
         } else if indexPath.row == 2 {
-            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditNumericCell.identifier, for: indexPath) as! RecipeEditNumericCell
-            cell.configure(title: "Calories", value: calories, suffix: "kcal", placeholder: "—")
-            cell.textField.tag = 102
-            cell.textField.addTarget(self, action: #selector(numericFieldDidChange(_:)), for: .editingChanged)
+            let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditStepperCell.identifier, for: indexPath) as! RecipeEditStepperCell
+            cell.configure(title: "Calories", value: calories, unit: "kcal", step: 5, minValue: 0, maxValue: 5000)
+            cell.onValueChanged = { [weak self] newValue in
+                self?.calories = newValue == 0 ? nil : newValue
+            }
             return cell
         } else {
             let cell = tableView.dequeueReusableCell(withIdentifier: RecipeEditDifficultyCell.identifier, for: indexPath) as! RecipeEditDifficultyCell
-            cell.segmentedControl.selectedSegmentIndex = difficultyValue
-            cell.segmentedControl.addTarget(self, action: #selector(difficultyDidChange(_:)), for: .valueChanged)
+            cell.configure(selectedIndex: difficultyValue)
             return cell
         }
     }
@@ -850,7 +1011,7 @@ extension RecipeEditViewController: UITableViewDataSource {
             cell.selectionStyle = .default
         } else if indexPath.row == allCategories.count {
             cell.textLabel?.text = "+ Add Category"
-            cell.textLabel?.textColor = .systemBlue
+            cell.textLabel?.textColor = .grannyPink
             cell.textLabel?.font = .systemFont(ofSize: 17)
             cell.accessoryType = .none
             cell.selectionStyle = .default
@@ -883,7 +1044,7 @@ extension RecipeEditViewController: UITableViewDataSource {
         } else {
             let cell = tableView.dequeueReusableCell(withIdentifier: "Cell", for: indexPath)
             cell.textLabel?.text = "+ Add Tag"
-            cell.textLabel?.textColor = .systemBlue
+            cell.textLabel?.textColor = .grannyPink
             cell.textLabel?.font = .systemFont(ofSize: 17)
             cell.accessoryType = .none
             cell.selectionStyle = .default
@@ -894,19 +1055,27 @@ extension RecipeEditViewController: UITableViewDataSource {
 
 extension RecipeEditViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        Haptics.selection()
         tableView.deselectRow(at: indexPath, animated: true)
 
         guard let sectionType = Section(rawValue: indexPath.section) else { return }
 
         switch sectionType {
         case .ingredients:
-            if indexPath.row < ingredients.count {
-                editIngredient(at: indexPath.row)
-            } else if indexPath.row == ingredients.count {
-                didTapAddIngredientButton()
+            if indexPath.row == ingredients.count {
+                ingredients.append(Ingredient(name: "", amount: nil))
+                tableView.reloadSections([Section.ingredients.rawValue], with: .automatic)
+            }
+        case .sources:
+            if indexPath.row == sources.count {
+                presentAddSourceAlert()
+            } else if indexPath.row < sources.count {
+                presentEditSourceAlert(at: indexPath.row)
             }
         case .extra:
-            break
+            if indexPath.row == 3 {
+                difficultyPickerTextField.becomeFirstResponder()
+            }
         case .categories:
             if indexPath.row < allCategories.count {
                 let category = allCategories[indexPath.row]
@@ -930,19 +1099,32 @@ extension RecipeEditViewController: UITableViewDelegate {
 
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
         guard let sectionType = Section(rawValue: indexPath.section),
-              sectionType == .ingredients,
-              editingStyle == .delete,
-              indexPath.row < ingredients.count else {
+              editingStyle == .delete else {
             return
         }
-
-        ingredients.remove(at: indexPath.row)
-        tableView.reloadSections([Section.ingredients.rawValue], with: .automatic)
+        
+        switch sectionType {
+        case .ingredients where indexPath.row < ingredients.count:
+            ingredients.remove(at: indexPath.row)
+            tableView.reloadSections([Section.ingredients.rawValue], with: .automatic)
+        case .sources where indexPath.row < sources.count:
+            sources.remove(at: indexPath.row)
+            tableView.reloadSections([Section.sources.rawValue], with: .automatic)
+        default:
+            break
+        }
     }
 
     func tableView(_ tableView: UITableView, canEditRowAt indexPath: IndexPath) -> Bool {
         guard let sectionType = Section(rawValue: indexPath.section) else { return false }
-        return sectionType == .ingredients && indexPath.row < ingredients.count
+        switch sectionType {
+        case .ingredients:
+            return indexPath.row < ingredients.count
+        case .sources:
+            return indexPath.row < sources.count
+        default:
+            return false
+        }
     }
 }
 
@@ -969,7 +1151,7 @@ extension RecipeEditViewController: UIImagePickerControllerDelegate, UINavigatio
 extension RecipeEditViewController: UITextViewDelegate {
     func textViewDidChange(_ textView: UITextView) {
         recipeInstructions = textView.text
-        if let cell = textView.superview?.superview as? RecipeEditInstructionsCell {
+        if let cell = textView.superview?.superview?.superview as? RecipeEditInstructionsCell {
             cell.updatePlaceholder()
         }
 
@@ -1021,6 +1203,7 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
     }
 
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        Haptics.selection()
         let tag = availableTags[indexPath.item]
         if selectedTags.contains(tag) {
             selectedTags.remove(tag)
@@ -1054,33 +1237,25 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
     
     private func createTagActionAlert(for tag: String, tagsCell: RecipeEditTagsCell, indexPath: IndexPath) -> UIAlertController {
         let alert = UIAlertController(title: "Tag: \(tag)", message: nil, preferredStyle: .actionSheet)
-        let isDefaultTag = TagsManager.shared.defaultTags.contains(tag)
         
-        addTagEditAction(to: alert, tag: tag, isDefaultTag: isDefaultTag)
-        addTagRemoveAction(to: alert, tag: tag, isDefaultTag: isDefaultTag)
+        addTagEditAction(to: alert, tag: tag)
+        addTagDeleteAction(to: alert, tag: tag)
         alert.addAction(UIAlertAction(title: "Cancel", style: .cancel))
         
         configureTagAlertPopover(alert: alert, tagsCell: tagsCell, indexPath: indexPath)
         return alert
     }
     
-    private func addTagEditAction(to alert: UIAlertController, tag: String, isDefaultTag: Bool) {
-        guard !isDefaultTag else { return }
+    private func addTagEditAction(to alert: UIAlertController, tag: String) {
         alert.addAction(UIAlertAction(title: "Edit", style: .default) { [weak self] _ in
             self?.editTag(tag)
         })
     }
     
-    private func addTagRemoveAction(to alert: UIAlertController, tag: String, isDefaultTag: Bool) {
-        if isDefaultTag {
-            alert.addAction(UIAlertAction(title: "Remove from Recipe", style: .destructive) { [weak self] _ in
-                self?.removeTagFromRecipe(tag)
-            })
-        } else {
-            alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
-                self?.deleteTag(tag)
-            })
-        }
+    private func addTagDeleteAction(to alert: UIAlertController, tag: String) {
+        alert.addAction(UIAlertAction(title: "Delete", style: .destructive) { [weak self] _ in
+            self?.deleteTag(tag)
+        })
     }
     
     private func removeTagFromRecipe(_ tag: String) {
@@ -1149,6 +1324,7 @@ extension RecipeEditViewController: UICollectionViewDataSource, UICollectionView
     }
     
     private func renameTag(from oldTag: String, to newName: String) {
+        renamedTagsDuringSession.append((oldName: oldTag, newName: newName))
         TagsManager.shared.renameTag(oldName: oldTag, newName: newName)
         
         if selectedTags.contains(oldTag) {
@@ -1179,8 +1355,39 @@ extension RecipeEditViewController: UICollectionViewDelegateFlowLayout {
     }
 }
 
-extension RecipeEditViewController {
-    @objc private func difficultyDidChange(_ segmentedControl: UISegmentedControl) {
-        difficultyValue = segmentedControl.selectedSegmentIndex
+extension RecipeEditViewController: UIPickerViewDataSource, UIPickerViewDelegate {
+    func numberOfComponents(in pickerView: UIPickerView) -> Int {
+        return 1
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, numberOfRowsInComponent component: Int) -> Int {
+        return difficultyOptions.count
+    }
+    
+    func pickerView(_ pickerView: UIPickerView, titleForRow row: Int, forComponent component: Int) -> String? {
+        return difficultyOptions[row]
+    }
+    
+    @objc private func cancelDifficultySelection() {
+        difficultyPickerTextField.resignFirstResponder()
+    }
+    
+    @objc private func applyDifficultySelection() {
+        let selectedRow = difficultyPicker.selectedRow(inComponent: 0)
+        difficultyValue = selectedRow
+        tableView.reloadRows(at: [IndexPath(row: 3, section: Section.extra.rawValue)], with: .none)
+        difficultyPickerTextField.resignFirstResponder()
+    }
+}
+
+extension RecipeEditViewController: RecipeEditIngredientInputCellDelegate {
+    func ingredientInputCellDidChange(_ cell: RecipeEditIngredientInputCell, name: String, amount: String?) {
+        guard let indexPath = tableView.indexPath(for: cell),
+              indexPath.section == Section.ingredients.rawValue,
+              indexPath.row < ingredients.count else { return }
+
+        var existing = ingredients[indexPath.row]
+        existing = Ingredient(id: existing.id, name: name, amount: amount)
+        ingredients[indexPath.row] = existing
     }
 }

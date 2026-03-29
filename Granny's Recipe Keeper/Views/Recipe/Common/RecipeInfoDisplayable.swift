@@ -17,48 +17,69 @@ protocol RecipeInfoDisplayable: AnyObject {
 extension RecipeInfoDisplayable {
 
     func configureRecipeInfo(for recipe: Recipe) {
-        var infoParts: [String] = []
+        var infoParts: [NSAttributedString] = []
+
+        let accentColor: UIColor = recipeInfoLabel.tintColor ?? .grannyPink
+        let symbolConfig = UIImage.SymbolConfiguration(pointSize: 13, weight: .regular)
+
+        func makeSymbolAttachment(_ systemName: String) -> NSAttributedString {
+            guard let baseImage = UIImage(systemName: systemName, withConfiguration: symbolConfig) else {
+                return NSAttributedString(string: "")
+            }
+            let image = baseImage.withTintColor(accentColor, renderingMode: .alwaysOriginal)
+            let attachment = NSTextAttachment()
+            attachment.image = image
+            // Немного приподнимаем иконку относительно базовой линии текста
+            attachment.bounds = CGRect(x: 0, y: -2, width: image.size.width, height: image.size.height)
+            return NSAttributedString(attachment: attachment)
+        }
 
         if let cookingTime = recipe.cookingTime, cookingTime > 0 {
-            infoParts.append("⏱ \(cookingTime) min")
+            let part = NSMutableAttributedString()
+            part.append(makeSymbolAttachment("timer"))
+            part.append(NSAttributedString(string: " \(cookingTime) min"))
+            infoParts.append(part)
         }
 
         if let servings = recipe.servings, servings > 0 {
-            infoParts.append("👥 \(servings) servings")
+            let part = NSMutableAttributedString()
+            part.append(makeSymbolAttachment("person.2"))
+            part.append(NSAttributedString(string: " \(servings) servings"))
+            infoParts.append(part)
         }
 
         if let calories = recipe.calories, calories > 0 {
-            infoParts.append("🔥 \(calories) cal")
+            let part = NSMutableAttributedString()
+            part.append(makeSymbolAttachment("flame"))
+            part.append(NSAttributedString(string: " \(calories) cal"))
+            infoParts.append(part)
         }
 
         if let difficulty = recipe.difficulty, !difficulty.isEmpty {
-            let stars = difficultyStars(for: difficulty)
             let capitalizedDifficulty = difficulty.prefix(1).uppercased() + difficulty.dropFirst()
-            infoParts.append("\(stars) \(capitalizedDifficulty)")
+            let part = NSMutableAttributedString()
+            part.append(makeSymbolAttachment("star.fill"))
+            part.append(NSAttributedString(string: " \(capitalizedDifficulty)"))
+            infoParts.append(part)
         }
 
         if infoParts.isEmpty {
             recipeInfoLabel.isHidden = true
         } else {
-            // Убираем точки между элементами и делаем строку адаптивной
-            recipeInfoLabel.text = infoParts.joined(separator: "   ")
+            // Собираем итоговую строку с отступами между блоками
+            let result = NSMutableAttributedString()
+            for (index, part) in infoParts.enumerated() {
+                if index > 0 {
+                    result.append(NSAttributedString(string: "   "))
+                }
+                result.append(part)
+            }
+
+            recipeInfoLabel.attributedText = result
             recipeInfoLabel.adjustsFontSizeToFitWidth = true
             recipeInfoLabel.minimumScaleFactor = 0.7
             recipeInfoLabel.numberOfLines = 1
             recipeInfoLabel.isHidden = false
-        }
-    }
-
-    private func difficultyStars(for difficulty: String) -> String {
-        switch difficulty.lowercased() {
-        case "easy":
-            return "⭐"
-        case "medium":
-            return "⭐⭐"
-        case "hard":
-            return "⭐⭐⭐"
-        default:
-            return "⭐"
         }
     }
 }

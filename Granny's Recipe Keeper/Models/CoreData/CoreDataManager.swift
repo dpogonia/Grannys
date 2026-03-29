@@ -87,7 +87,27 @@ class CoreDataManager {
         recipeTags.attributeType = .stringAttributeType
         recipeTags.isOptional = true
         
-        recipeEntity.properties = [recipeId, recipeName, recipeInstructions, recipeImageData, recipeImageURL, recipeIsArchived, recipeIsFavorite, recipeCreatedAt, recipeCookingTime, recipeServings, recipeDifficulty, recipeCalories, recipeTags]
+        let recipeSources = NSAttributeDescription()
+        recipeSources.name = "sources"
+        recipeSources.attributeType = .stringAttributeType
+        recipeSources.isOptional = true
+        
+        recipeEntity.properties = [
+            recipeId,
+            recipeName,
+            recipeInstructions,
+            recipeImageData,
+            recipeImageURL,
+            recipeIsArchived,
+            recipeIsFavorite,
+            recipeCreatedAt,
+            recipeCookingTime,
+            recipeServings,
+            recipeDifficulty,
+            recipeCalories,
+            recipeTags,
+            recipeSources
+        ]
         
         let categoryEntity = NSEntityDescription()
         categoryEntity.name = "CategoryEntity"
@@ -280,6 +300,7 @@ class RecipeEntity: NSManagedObject {
     @NSManaged var difficulty: String?
     @NSManaged var calories: NSNumber?
     @NSManaged var tags: String?
+    @NSManaged var sources: String?
     @NSManaged var ingredients: NSSet?
     @NSManaged var categories: NSSet?
 }

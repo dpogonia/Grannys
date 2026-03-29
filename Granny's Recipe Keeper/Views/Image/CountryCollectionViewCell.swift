@@ -5,17 +5,12 @@
 //  Created by Dmitrii Pogonia on 28.01.2026.
 //
 
-// ДЗ MOYA: UI для отображения данных из API
-
 import UIKit
 
-/// ДЗ MOYA: Реализовано отображение данных - 40 баллов
-/// Ячейка для отображения страны в коллекции
 class CountryCollectionViewCell: UICollectionViewCell {
     
     static let cellIdentifier = "CountryCollectionViewCell"
     
-    // UI элементы
     private lazy var containerView: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
@@ -49,7 +44,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
     private lazy var selectionIndicator: UIView = {
         let view = UIView()
         view.translatesAutoresizingMaskIntoConstraints = false
-        view.backgroundColor = .systemBlue
+        view.backgroundColor = .grannyPink
         view.layer.cornerRadius = 2
         view.alpha = 0
         return view
@@ -102,15 +97,13 @@ class CountryCollectionViewCell: UICollectionViewCell {
         ])
     }
     
-    // ДЗ MOYA: Реализовано отображение данных
-    // Конфигурация для "All Countries" ячейки
     func configureAsAllCountries(isSelected: Bool = false) {
         flagLabel.text = "🌍"
         nameLabel.text = "All Countries"
         
         UIView.animate(withDuration: 0.2) {
             self.selectionIndicator.alpha = isSelected ? 1.0 : 0
-            self.containerView.backgroundColor = isSelected ? UIColor.systemBlue.withAlphaComponent(0.1) : .systemBackground
+            self.containerView.backgroundColor = isSelected ? UIColor.grannyPink.withAlphaComponent(0.1) : .systemBackground
         }
     }
     
@@ -121,7 +114,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         
         UIView.animate(withDuration: 0.2) {
             self.selectionIndicator.alpha = isSelected ? 1.0 : 0
-            self.containerView.backgroundColor = isSelected ? UIColor.systemBlue.withAlphaComponent(0.1) : .systemBackground
+            self.containerView.backgroundColor = isSelected ? UIColor.grannyPink.withAlphaComponent(0.1) : .systemBackground
         }
     }
     
@@ -132,7 +125,7 @@ class CountryCollectionViewCell: UICollectionViewCell {
         
         UIView.animate(withDuration: 0.2) {
             self.selectionIndicator.alpha = isSelected ? 1.0 : 0
-            self.containerView.backgroundColor = isSelected ? UIColor.systemBlue.withAlphaComponent(0.1) : .systemBackground
+            self.containerView.backgroundColor = isSelected ? UIColor.grannyPink.withAlphaComponent(0.1) : .systemBackground
         }
     }
 }

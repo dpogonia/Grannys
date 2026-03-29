@@ -152,6 +152,7 @@ class TheMealDBFilterViewController: UIViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        tableView.tintColor = .grannyPink
     }
     
     private func setupView() {
@@ -173,6 +174,8 @@ class TheMealDBFilterViewController: UIViewController {
             target: self,
             action: #selector(didTapApplyButton)
         )
+        clearButton.tintColor = .grannyPink
+        applyButton.tintColor = .grannyPink
         
         navigationItem.rightBarButtonItems = [applyButton, clearButton]
         
@@ -209,6 +212,28 @@ class TheMealDBFilterViewController: UIViewController {
         )
         regionsCollectionView.dataSource = self
         regionsCollectionView.delegate = self
+    }
+
+    /// SFSymbol-иконки для категорий ингредиентов.
+    private func symbolNameForIngredientCategory(_ categoryName: String) -> String {
+        switch categoryName {
+        case "Meat & Poultry":
+            return "flame.fill"
+        case "Fish & Seafood":
+            return "fish.fill"
+        case "Vegetables":
+            return "carrot.fill"
+        case "Grains & Legumes":
+            return "takeoutbag.and.cup.and.straw"
+        case "Dairy Products":
+            return "carton.fill"
+        case "Spices & Herbs":
+            return "leaf"
+        case "Other Ingredients":
+            return "takeoutbag.and.cup.and.straw"
+        default:
+            return "takeoutbag.and.cup.and.straw"
+        }
     }
     
     @objc private func didTapApplyButton() {
@@ -358,7 +383,6 @@ extension TheMealDBFilterViewController: UITableViewDataSource {
         } else {
             // Добавляем collection view для категории ингредиентов
             let categoryIndex = indexPath.section - 2
-            let category = ingredientCategories[categoryIndex]
             
             let layout = UICollectionViewFlowLayout()
             layout.scrollDirection = .horizontal
@@ -472,7 +496,8 @@ extension TheMealDBFilterViewController: UICollectionViewDataSource {
             let ingredient = category.ingredients[indexPath.item]
             let ingredientName = ingredient.strIngredient ?? ""
             let isSelected = selectedIngredient?.strIngredient == ingredientName
-            cell.configure(with: ingredientName, isSelected: isSelected)
+            let symbolName = symbolNameForIngredientCategory(category.name)
+            cell.configure(with: ingredientName, isSelected: isSelected, symbolNameOverride: symbolName)
             
             return cell
         }
@@ -482,6 +507,7 @@ extension TheMealDBFilterViewController: UICollectionViewDataSource {
 // MARK: - UICollectionViewDelegate
 extension TheMealDBFilterViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        Haptics.selection()
         if collectionView == countriesCollectionView {
             if indexPath.item == 0 {
                 // При выборе "All Countries" только сбрасываем страну, но НЕ регион

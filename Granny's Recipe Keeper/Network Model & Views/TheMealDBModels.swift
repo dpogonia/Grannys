@@ -1,20 +1,9 @@
-//
-//  TheMealDBModels.swift
-//  Granny's Recipe Keeper
-//
-//  Created for CleanSwift (VIP) Architecture
-//
 
 import Foundation
 
-// ДЗ CLEANSWIFT: Models для VIP цикла
-// Все модели организованы по сценариям использования
-
 // Load Categories
 enum LoadCategories {
-    struct Request {
-        // Пустой запрос - не требует параметров
-    }
+    struct Request { }
     
     struct Response {
         let categories: [TheMealDBCategory]

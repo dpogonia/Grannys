@@ -50,7 +50,7 @@ class ToggleFavoriteCommand: RecipeCommand {
     private var previousState: Bool
 
     var description: String {
-        return recipe.isFavorite ? "Removed from favorites" : "Added to favorites"
+        return previousState ? "Removed from favorites" : "Added to favorites"
     }
 
     init(recipe: Recipe) {
@@ -70,6 +70,41 @@ class ToggleFavoriteCommand: RecipeCommand {
             updatedRecipe.isFavorite = previousState
             RecipesRepository.shared.saveRecipe(updatedRecipe)
             print("↩️ Command: Favorite state restored - \(recipe.name)")
+        }
+    }
+}
+
+// MARK: - ArchiveRecipeCommand
+// Команда архивации / разархивации рецепта с возможностью Undo
+class ArchiveRecipeCommand: RecipeCommand {
+    private let recipe: Recipe
+    private let previousIsArchived: Bool
+
+    var description: String {
+        return previousIsArchived ? "Recipe restored from archive" : "Recipe moved to archive"
+    }
+
+    init(recipe: Recipe) {
+        self.recipe = recipe
+        self.previousIsArchived = recipe.isArchived
+    }
+
+    func execute() {
+        if previousIsArchived {
+            RecipesRepository.shared.unarchiveRecipe(recipe)
+            print("✅ Command: Recipe unarchived - \(recipe.name)")
+        } else {
+            RecipesRepository.shared.archiveRecipe(recipe)
+            print("✅ Command: Recipe archived - \(recipe.name)")
+        }
+    }
+
+    func undo() {
+        if let currentRecipe = RecipesRepository.shared.getRecipe(by: recipe.id) {
+            var updated = currentRecipe
+            updated.isArchived = previousIsArchived
+            RecipesRepository.shared.saveRecipe(updated)
+            print("↩️ Command: Archive state restored - \(recipe.name)")
         }
     }
 }

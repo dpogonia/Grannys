@@ -1,10 +1,3 @@
-//
-//  TheMealDBProtocols.swift
-//  Granny's Recipe Keeper
-//
-//  Created for CleanSwift (VIP) Architecture
-//  Protocols (Interfaces) separated from implementations
-//
 
 import Foundation
 

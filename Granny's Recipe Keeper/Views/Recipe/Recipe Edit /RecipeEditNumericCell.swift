@@ -38,7 +38,7 @@ class RecipeEditNumericCell: UITableViewCell {
     let textField: PaddedTextField = {
         let textField = PaddedTextField()
         textField.translatesAutoresizingMaskIntoConstraints = false
-        textField.textAlignment = .center
+        textField.textAlignment = .right
         textField.font = .systemFont(ofSize: 17)
         textField.keyboardType = .numberPad
         textField.textColor = .label
@@ -48,14 +48,6 @@ class RecipeEditNumericCell: UITableViewCell {
         textField.layer.borderColor = UIColor.systemGray4.cgColor
         textField.padding = UIEdgeInsets(top: 8, left: 12, bottom: 8, right: 12)
         return textField
-    }()
-    
-    private let suffixLabel: UILabel = {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.font = .systemFont(ofSize: 17)
-        label.textColor = .secondaryLabel
-        return label
     }()
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -70,17 +62,13 @@ class RecipeEditNumericCell: UITableViewCell {
     private func setupUI() {
         contentView.addSubview(titleLabel)
         contentView.addSubview(textField)
-        contentView.addSubview(suffixLabel)
         selectionStyle = .none
         
         NSLayoutConstraint.activate([
             titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             
-            suffixLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            suffixLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            
-            textField.trailingAnchor.constraint(equalTo: suffixLabel.leadingAnchor, constant: -8),
+            textField.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
             textField.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             textField.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 16),
             textField.widthAnchor.constraint(greaterThanOrEqualToConstant: 80),
@@ -90,9 +78,8 @@ class RecipeEditNumericCell: UITableViewCell {
         ])
     }
     
-    func configure(title: String, value: Int?, suffix: String, placeholder: String = "Tap to enter") {
+    func configure(title: String, value: Int?, placeholder: String = "Tap to enter") {
         titleLabel.text = title
-        suffixLabel.text = suffix
         
         // Настраиваем placeholder с атрибутами
         let placeholderText = NSAttributedString(

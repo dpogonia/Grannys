@@ -46,9 +46,9 @@ class TagCollectionViewCell: UICollectionViewCell {
         tagLabel.text = tag
         
         if isSelected {
-            contentView.backgroundColor = .systemBlue
+            contentView.backgroundColor = .grannyPink
             tagLabel.textColor = .white
-            contentView.layer.borderColor = UIColor.systemBlue.cgColor
+            contentView.layer.borderColor = UIColor.grannyPink.cgColor
         } else {
             contentView.backgroundColor = .secondarySystemBackground
             tagLabel.textColor = .label

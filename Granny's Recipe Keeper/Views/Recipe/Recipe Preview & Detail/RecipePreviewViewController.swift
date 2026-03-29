@@ -68,7 +68,7 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
     }()
 
     private let translationSegmentedControl: UISegmentedControl = {
-        let control = UISegmentedControl(items: ["Original", "Translated"])
+        let control = UISegmentedControl(items: ["EN", "XX"])
         control.translatesAutoresizingMaskIntoConstraints = false
         control.selectedSegmentIndex = 0
         return control
@@ -115,6 +115,31 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         textView.textContainer.lineFragmentPadding = 0
         return textView
     }()
+    
+    private let sourcesLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 16, weight: .semibold)
+        label.textColor = .label
+        label.text = "Source:"
+        label.isHidden = true
+        return label
+    }()
+    
+    private let sourcesTextView: UITextView = {
+        let textView = UITextView()
+        textView.translatesAutoresizingMaskIntoConstraints = false
+        textView.font = .systemFont(ofSize: 14)
+        textView.isEditable = false
+        textView.isScrollEnabled = false
+        textView.backgroundColor = .clear
+        textView.textContainerInset = .zero
+        textView.textContainer.lineFragmentPadding = 0
+        textView.dataDetectorTypes = [.link]
+        textView.isUserInteractionEnabled = true
+        textView.isHidden = true
+        return textView
+    }()
 
     private let addButton: UIButton = {
         let button = UIButton(type: .system)
@@ -122,9 +147,9 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         button.setTitle("Add Recipe", for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         button.setTitleColor(.white, for: .normal)
-        button.backgroundColor = .systemBlue
+        button.backgroundColor = .grannyPink
         button.layer.cornerRadius = 12
-        button.layer.shadowColor = UIColor.systemBlue.cgColor
+        button.layer.shadowColor = UIColor.grannyPink.cgColor
         button.layer.shadowOffset = CGSize(width: 0, height: 4)
         button.layer.shadowRadius = 8
         button.layer.shadowOpacity = 0.3
@@ -150,6 +175,7 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         setupLayout()
         configure()
         setupTranslationControl()
+        updateTranslationSegmentTitles()
     }
     
     private func setupButtons() {
@@ -171,13 +197,29 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
 
-        view.backgroundColor = .systemBackground
-        scrollView.backgroundColor = .systemBackground
-        contentView.backgroundColor = .systemBackground
-
+        let backgroundColor: UIColor = .systemBackground
+        view.backgroundColor = backgroundColor
+        scrollView.backgroundColor = backgroundColor
+        contentView.backgroundColor = backgroundColor
+        
         if let navController = navigationController {
-            navController.view.backgroundColor = .systemBackground
-            navController.navigationBar.backgroundColor = .systemBackground
+            navController.view.backgroundColor = backgroundColor
+            
+            if #available(iOS 15.0, *) {
+                let appearance = UINavigationBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = backgroundColor
+                appearance.shadowColor = .clear
+                
+                navController.navigationBar.standardAppearance = appearance
+                navController.navigationBar.scrollEdgeAppearance = appearance
+                navController.navigationBar.compactAppearance = appearance
+            } else {
+                navController.navigationBar.isTranslucent = false
+                navController.navigationBar.barTintColor = backgroundColor
+                navController.navigationBar.shadowImage = UIImage()
+                navController.navigationBar.setBackgroundImage(UIImage(), for: .default)
+            }
         }
     }
 
@@ -201,7 +243,8 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
             )
         }
 
-        navigationItem.rightBarButtonItem = favoriteButton
+        let segmentedItem = UIBarButtonItem(customView: translationSegmentedControl)
+        navigationItem.rightBarButtonItems = [segmentedItem, favoriteButton]
     }
 
     @objc private func didTapFavoriteButton() {
@@ -237,7 +280,8 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
                     servings: convertedRecipe.servings,
                     difficulty: convertedRecipe.difficulty,
                     calories: convertedRecipe.calories,
-                    tags: convertedRecipe.tags
+                    tags: convertedRecipe.tags,
+                    sources: convertedRecipe.sources
                 )
             } else {
                 recipeToSave = Recipe(
@@ -255,7 +299,8 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
                     servings: recipe.servings,
                     difficulty: recipe.difficulty,
                     calories: recipe.calories,
-                    tags: recipe.tags
+                    tags: recipe.tags,
+                    sources: recipe.sources
                 )
             }
 
@@ -272,7 +317,7 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
 
     private func updateFavoriteButton() {
         favoriteButton.image = UIImage(systemName: isFavorite ? "heart.fill" : "heart")
-        favoriteButton.tintColor = isFavorite ? .systemRed : .label
+        favoriteButton.tintColor = isFavorite ? .grannyPink : .label
     }
 
     @objc private func didTapBack() {
@@ -287,15 +332,15 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         view.addSubview(scrollView)
         scrollView.addSubview(contentView)
 
-        contentView.addSubview(translationSegmentedControl)
         contentView.addSubview(recipeImageView)
         contentView.addSubview(nameLabel)
         contentView.addSubview(ingredientsLabel)
         contentView.addSubview(ingredientsTextView)
         contentView.addSubview(instructionsLabel)
         contentView.addSubview(instructionsTextView)
+        contentView.addSubview(sourcesLabel)
+        contentView.addSubview(sourcesTextView)
         contentView.addSubview(recipeInfoLabel)
-        contentView.addSubview(translationSegmentedControl)
         contentView.addSubview(addButton)
 
         NSLayoutConstraint.activate([
@@ -309,11 +354,8 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
             contentView.trailingAnchor.constraint(equalTo: scrollView.trailingAnchor),
             contentView.bottomAnchor.constraint(equalTo: scrollView.bottomAnchor),
             contentView.widthAnchor.constraint(equalTo: scrollView.widthAnchor),
-
-            translationSegmentedControl.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 12),
-            translationSegmentedControl.centerXAnchor.constraint(equalTo: contentView.centerXAnchor),
-
-            recipeImageView.topAnchor.constraint(equalTo: translationSegmentedControl.bottomAnchor, constant: 12),
+            
+            recipeImageView.topAnchor.constraint(equalTo: contentView.topAnchor),
             recipeImageView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor),
             recipeImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor),
             recipeImageView.heightAnchor.constraint(equalToConstant: 200),
@@ -337,8 +379,16 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
             instructionsTextView.topAnchor.constraint(equalTo: instructionsLabel.bottomAnchor, constant: 8),
             instructionsTextView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             instructionsTextView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            
+            sourcesLabel.topAnchor.constraint(equalTo: instructionsTextView.bottomAnchor, constant: 24),
+            sourcesLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            sourcesLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            
+            sourcesTextView.topAnchor.constraint(equalTo: sourcesLabel.bottomAnchor, constant: 8),
+            sourcesTextView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            sourcesTextView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
-            recipeInfoLabel.topAnchor.constraint(equalTo: instructionsTextView.bottomAnchor, constant: 16),
+            recipeInfoLabel.topAnchor.constraint(equalTo: sourcesTextView.bottomAnchor, constant: 16),
             recipeInfoLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             recipeInfoLabel.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
 
@@ -378,6 +428,21 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         } else {
             instructionsTextView.text = "No instructions provided"
         }
+        
+        let recipeSources = recipe.sources
+        let apiSources = apiRecipe?.sources ?? []
+        let allSources = !recipeSources.isEmpty ? recipeSources : apiSources
+        
+        if allSources.isEmpty {
+            sourcesLabel.isHidden = true
+            sourcesTextView.isHidden = true
+            sourcesTextView.text = nil
+        } else {
+            sourcesLabel.isHidden = false
+            sourcesTextView.isHidden = false
+            let text = allSources.joined(separator: "\n")
+            sourcesTextView.text = text
+        }
     }
 
     private func setupTranslationControl() {
@@ -406,6 +471,7 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         if currentLanguage == .english {
             presentLanguageSelectionForTranslation { [weak self] selectedLanguage in
                 TranslationSettings.shared.preferredLanguage = selectedLanguage
+                self?.updateTranslationSegmentTitles()
                 self?.loadTranslationIfNeeded()
             }
             return
@@ -452,11 +518,21 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
     
     private func presentLanguageSelectionForTranslation(onSelected: @escaping (AppLanguage) -> Void) {
         let current = TranslationSettings.shared.preferredLanguage
+        let uiLanguage = AppLanguage.fromCurrentLocale()
+        let isRussianUI = uiLanguage == .russian
+        
+        let title = isRussianUI
+            ? "Выбор языка перевода"
+            : "Select translation language"
+        let message = isRussianUI
+            ? "Выберите язык для переведённого текста"
+            : "Choose language for translated text"
+        let cancelTitle = isRussianUI ? "Отмена" : "Cancel"
         
         let alert = UIAlertController(
-            title: "Select translation language",
-            message: "Choose language for translated text",
-            preferredStyle: .actionSheet
+            title: title,
+            message: message,
+            preferredStyle: .alert
         )
         
         for language in AppLanguage.allCases where language != .english {
@@ -467,7 +543,7 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
             alert.addAction(action)
         }
         
-        alert.addAction(UIAlertAction(title: "Cancel", style: .cancel) { [weak self] _ in
+        alert.addAction(UIAlertAction(title: cancelTitle, style: .cancel) { [weak self] _ in
             self?.translationSegmentedControl.selectedSegmentIndex = 0
             self?.isShowingTranslation = false
         })
@@ -480,4 +556,23 @@ class RecipePreviewViewController: UIViewController, RecipeInfoDisplayable, Reci
         present(alert, animated: true)
     }
 
+}
+
+private extension RecipePreviewViewController {
+    func updateTranslationSegmentTitles() {
+        // Оригинал всегда считается английской версией
+        translationSegmentedControl.setTitle(AppLanguage.english.shortCode, forSegmentAt: 0)
+        
+        let target = TranslationSettings.shared.preferredLanguage
+        
+        if target == .english {
+            // Если язык перевода не выбран (или EN), показываем иконку словаря
+            translationSegmentedControl.setTitle(nil, forSegmentAt: 1)
+            translationSegmentedControl.setImage(UIImage(systemName: "book.closed"), forSegmentAt: 1)
+        } else {
+            // Для выбранного отличного от EN языка показываем его код
+            translationSegmentedControl.setImage(nil, forSegmentAt: 1)
+            translationSegmentedControl.setTitle(target.shortCode, forSegmentAt: 1)
+        }
+    }
 }

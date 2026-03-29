@@ -3,14 +3,12 @@
 //  Granny's Recipe Keeper
 //
 //  Created by Dmitrii Pogonia on 17.12.2025.
-//  Refactored to CleanSwift (VIP) Architecture
 //
 
 import UIKit
+import FirebaseAnalytics
 
-// ДЗ CLEANSWIFT: ViewController - отвечает только за UI
-// ViewController Interactor Worker Interactor Presenter ViewController
-// ViewController не содержит бизнес-логику, только отображение и взаимодействие с пользователем
+// ДЗ FIREBASE АНАЛИТИКА: кнопки фильтра и смены языка перевода отправляют аналитику по тапам на них (@objc private func didTapFilterButton(), @objc private func didTapLanguageButton()), также привязал Crashlitics тестом краша по кнопке @objc private func didTapSearchButton()
 
 class TheMealDBViewController: UIViewController {
     
@@ -100,6 +98,33 @@ class TheMealDBViewController: UIViewController {
         return tableView
     }()
     
+    private let bottomSearchContainer: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .secondarySystemBackground
+        view.layer.cornerRadius = 20
+        view.layer.masksToBounds = false
+        view.layer.shadowColor = UIColor.black.cgColor
+        view.layer.shadowOpacity = 0.1
+        view.layer.shadowOffset = CGSize(width: 0, height: 2)
+        view.layer.shadowRadius = 6
+        view.isHidden = true
+        view.alpha = 0
+        return view
+    }()
+    
+    private let bottomSearchTextField: UITextField = {
+        let textField = UITextField()
+        textField.translatesAutoresizingMaskIntoConstraints = false
+        textField.placeholder = "Search recipes..."
+        textField.borderStyle = .none
+        textField.clearButtonMode = .whileEditing
+        textField.returnKeyType = .search
+        textField.font = .systemFont(ofSize: 16)
+        textField.textColor = .label
+        return textField
+    }()
+    
     private let refreshControl: UIRefreshControl = {
         return UIRefreshControl()
     }()
@@ -145,7 +170,6 @@ class TheMealDBViewController: UIViewController {
         setup()
     }
     
-    // Создаем и связываем все компоненты CleanSwift: Interactor, Presenter, Router
     private func setup() {
         let viewController = self
         let interactor = TheMealDBInteractor()
@@ -168,14 +192,13 @@ class TheMealDBViewController: UIViewController {
         setupNavigationBar()
         setupTableView()
         setupConstraints()
+        setupBottomSearch()
         
-        // Загрузка данных через Interactor
         interactor?.loadCachedRecipes()
         
         let loadCategoriesRequest = LoadCategories.Request()
         interactor?.loadCategories(request: loadCategoriesRequest)
         
-        // ДЗ MOYA: Загрузка стран через Moya API (теперь через Interactor)
         let loadCountriesRequest = LoadCountries.Request()
         interactor?.loadCountries(request: loadCountriesRequest)
         
@@ -194,7 +217,7 @@ class TheMealDBViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         
-        // Делаем фон под навбаром таким же, как и у остального экрана
+        // Делаем фон под навбаром таким же, как и у остального экрана (динамичный systemBackground)
         let backgroundColor: UIColor = .systemBackground
         view.backgroundColor = backgroundColor
         
@@ -227,7 +250,7 @@ class TheMealDBViewController: UIViewController {
     }
     
     @objc private func didTapSearchButton() {
-        router?.routeToSearch()
+        toggleBottomSearch()
     }
     
     @objc private func didTapFilterButton() {
@@ -239,6 +262,8 @@ class TheMealDBViewController: UIViewController {
             selectedArea: nil,
             selectedIngredient: nil
         )
+        // ДЗ FIREBASE АНАЛИТИКА
+        Analytics.logEvent("filter_button_tapped", parameters: ["user_name": "test_user", "completed": true])
     }
     
     @objc private func didTapBack() {
@@ -269,6 +294,9 @@ class TheMealDBViewController: UIViewController {
         }
         
         present(alert, animated: true)
+        // ДЗ АНАЛИТИКА
+        Analytics.logEvent("language_button_tapped", parameters: ["user_name": "test_user", "completed": true])
+
     }
     
     @objc private func refreshData() {
@@ -318,7 +346,7 @@ class TheMealDBViewController: UIViewController {
     private func setupNavigationBar() {
         setupBarButtons()
         navigationItem.leftBarButtonItem = backButton
-        navigationItem.rightBarButtonItems = [randomButton, searchButton, filterButton, languageButton]
+        navigationItem.rightBarButtonItems = [searchButton, filterButton, languageButton]
     }
     
     private func setupBarButtons() {
@@ -352,6 +380,7 @@ class TheMealDBViewController: UIViewController {
         tableView.refreshControl = refreshControl
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.separatorStyle = .none
     }
     
     private func setupCollectionViews() {
@@ -373,6 +402,52 @@ class TheMealDBViewController: UIViewController {
         )
     }
     
+    private func setupBottomSearch() {
+        view.addSubview(bottomSearchContainer)
+        bottomSearchContainer.addSubview(bottomSearchTextField)
+        
+        bottomSearchTextField.delegate = self
+        bottomSearchTextField.addTarget(self, action: #selector(bottomSearchTextChanged(_:)), for: .editingChanged)
+        
+        NSLayoutConstraint.activate([
+            bottomSearchContainer.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor, constant: 16),
+            bottomSearchContainer.trailingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.trailingAnchor, constant: -16),
+            bottomSearchContainer.bottomAnchor.constraint(equalTo: view.safeAreaLayoutGuide.bottomAnchor, constant: -8),
+            bottomSearchContainer.heightAnchor.constraint(equalToConstant: 44),
+            
+            bottomSearchTextField.leadingAnchor.constraint(equalTo: bottomSearchContainer.leadingAnchor, constant: 16),
+            bottomSearchTextField.trailingAnchor.constraint(equalTo: bottomSearchContainer.trailingAnchor, constant: -16),
+            bottomSearchTextField.topAnchor.constraint(equalTo: bottomSearchContainer.topAnchor),
+            bottomSearchTextField.bottomAnchor.constraint(equalTo: bottomSearchContainer.bottomAnchor)
+        ])
+        
+        // Добавляем небольшой нижний отступ, чтобы контент не уходил под строку поиска
+        tableView.contentInset.bottom = 60
+        tableView.verticalScrollIndicatorInsets.bottom = 60
+    }
+
+    private func toggleBottomSearch() {
+        let shouldShow = bottomSearchContainer.isHidden
+        
+        if shouldShow {
+            bottomSearchContainer.isHidden = false
+            UIView.animate(withDuration: 0.25) {
+                self.bottomSearchContainer.alpha = 1
+            }
+            bottomSearchTextField.becomeFirstResponder()
+        } else {
+            bottomSearchTextField.resignFirstResponder()
+            UIView.animate(withDuration: 0.25, animations: {
+                self.bottomSearchContainer.alpha = 0
+            }, completion: { _ in
+                self.bottomSearchContainer.isHidden = true
+                // При закрытии строки поиска очищаем текст,
+                // но сами результаты поиска не трогаем.
+                self.bottomSearchTextField.text = ""
+            })
+        }
+    }
+    
     private func setupConstraints() {
         view.addSubview(activityIndicator)
         
@@ -380,7 +455,8 @@ class TheMealDBViewController: UIViewController {
             categoriesCollectionView.topAnchor.constraint(equalTo: view.safeAreaLayoutGuide.topAnchor, constant: 8),
             categoriesCollectionView.leadingAnchor.constraint(equalTo: view.leadingAnchor),
             categoriesCollectionView.trailingAnchor.constraint(equalTo: view.trailingAnchor),
-            categoriesCollectionView.heightAnchor.constraint(equalToConstant: 100),
+            // Компактная высота под одну строку чипов категорий
+            categoriesCollectionView.heightAnchor.constraint(equalToConstant: 52),
             
             tableView.topAnchor.constraint(equalTo: categoriesCollectionView.bottomAnchor, constant: 8),
             tableView.leadingAnchor.constraint(equalTo: view.safeAreaLayoutGuide.leadingAnchor),
@@ -472,6 +548,7 @@ extension TheMealDBViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        Haptics.lightImpact()
         tableView.deselectRow(at: indexPath, animated: true)
         
         guard !isLoading && !isLoadingMore else { return }
@@ -520,7 +597,8 @@ extension TheMealDBViewController: UITableViewDelegate {
 
 extension TheMealDBViewController: UICollectionViewDataSource {
     func collectionView(_ collectionView: UICollectionView, numberOfItemsInSection section: Int) -> Int {
-        return displayedCategories.count + 1
+        // +1 для "All Recipes" (в начале) и +1 для "Shuffle" (в конце)
+        return displayedCategories.count + 2
     }
     
     func collectionView(_ collectionView: UICollectionView, cellForItemAt indexPath: IndexPath) -> UICollectionViewCell {
@@ -537,8 +615,11 @@ extension TheMealDBViewController: UICollectionViewDataSource {
     }
     
     private func configureCategoryCell(_ cell: CategoryCollectionViewCell, at indexPath: IndexPath) {
+        // 0 — "All Recipes", последняя — "Shuffle", остальные — категории
         if indexPath.item == 0 {
             configureAllRecipesCell(cell)
+        } else if indexPath.item == displayedCategories.count + 1 {
+            configureShuffleCell(cell)
         } else {
             configureCategoryItemCell(cell, at: indexPath)
         }
@@ -547,7 +628,13 @@ extension TheMealDBViewController: UICollectionViewDataSource {
     private func configureAllRecipesCell(_ cell: CategoryCollectionViewCell) {
         guard let dataStore = router?.dataStore else { return }
         let isSelected = isAllRecipesSelected(dataStore)
-        cell.configure(with: "All Recipes", isSelected: isSelected)
+        let title = CategoryLocalization.localizedMealDBCategoryName("All Recipes")
+        cell.configure(with: title, isSelected: isSelected)
+    }
+    
+    private func configureShuffleCell(_ cell: CategoryCollectionViewCell) {
+        let title = CategoryLocalization.localizedMealDBCategoryName("Shuffle")
+        cell.configure(with: title, isSelected: false)
     }
     
     private func isAllRecipesSelected(_ dataStore: TheMealDBDataStore) -> Bool {
@@ -557,8 +644,10 @@ extension TheMealDBViewController: UICollectionViewDataSource {
     }
     
     private func configureCategoryItemCell(_ cell: CategoryCollectionViewCell, at indexPath: IndexPath) {
+        // Смещаемся на 1 из‑за "Shuffle" в начале
         let category = displayedCategories[indexPath.item - 1]
-        cell.configure(with: category.name, isSelected: category.isSelected)
+        let isSelected = (indexPath.item == selectedCategoryIndex)
+        cell.configure(with: category.name, isSelected: isSelected)
     }
 }
 
@@ -566,8 +655,26 @@ extension TheMealDBViewController: UICollectionViewDataSource {
 
 extension TheMealDBViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        if collectionView === categoriesCollectionView {
+            Haptics.selection()
+        }
+        
+        // Ячейка "Shuffle" (в конце) работает как кнопка: просто перемешивает/открывает случайный рецепт
+        if collectionView === categoriesCollectionView && indexPath.item == displayedCategories.count + 1 {
+            didTapRandomButton()
+            collectionView.deselectItem(at: indexPath, animated: true)
+            return
+        }
+        
         selectedCategoryIndex = indexPath.item
-        let request = SelectCategory.Request(categoryIndex: indexPath.item)
+        
+        // Преобразуем индекс ячейки к индексу, ожидаемому интерактором:
+        // 0 — "All Recipes", 1...N — категории.
+        let categoryIndex: Int
+        // Первая ячейка — "All Recipes", далее 1...N — категории.
+        categoryIndex = indexPath.item
+        
+        let request = SelectCategory.Request(categoryIndex: categoryIndex)
         interactor?.selectCategory(request: request)
         categoriesCollectionView.reloadData()
     }
@@ -575,12 +682,56 @@ extension TheMealDBViewController: UICollectionViewDelegate {
 
 extension TheMealDBViewController: UICollectionViewDelegateFlowLayout {
     func collectionView(_ collectionView: UICollectionView, layout collectionViewLayout: UICollectionViewLayout, sizeForItemAt indexPath: IndexPath) -> CGSize {
-        return CGSize(width: 95, height: 100)
+        // Делаем ширину чипов компактной и зависящей от текста
+        let font = UIFont.systemFont(ofSize: 14, weight: .medium)
+        let text: String
+        if collectionView === categoriesCollectionView {
+            if indexPath.item == 0 {
+                text = CategoryLocalization.localizedMealDBCategoryName("All Recipes")
+            } else if indexPath.item == displayedCategories.count + 1 {
+                text = CategoryLocalization.localizedMealDBCategoryName("Shuffle")
+            } else if indexPath.item <= displayedCategories.count {
+                text = displayedCategories[indexPath.item - 1].name
+            } else {
+                text = ""
+            }
+        } else {
+            text = ""
+        }
+        
+        let padding: CGFloat = 24 // по 12pt слева и справа
+        let minWidth: CGFloat = 60
+        let textWidth = (text as NSString).size(withAttributes: [.font: font]).width
+        let width = max(minWidth, textWidth + padding)
+        
+        // Высоту делаем чуть выше (~20% больше 32)
+        return CGSize(width: width, height: 38)
     }
 }
 
 extension TheMealDBViewController: CategoriesSelectionViewControllerDelegate {
     func didAddRecipe() {
+    }
+}
+
+// MARK: - Bottom Search
+
+extension TheMealDBViewController: UITextFieldDelegate {
+    @objc private func bottomSearchTextChanged(_ textField: UITextField) {
+        // Можно запускать поиск по нажатию Return, а не на каждый символ,
+        // поэтому здесь пока ничего не делаем.
+    }
+    
+    func textFieldShouldReturn(_ textField: UITextField) -> Bool {
+        guard let query = textField.text?.trimmingCharacters(in: .whitespacesAndNewlines),
+              !query.isEmpty else {
+            return false
+        }
+        
+        let request = SearchRecipes.Request(query: query)
+        interactor?.searchRecipes(request: request)
+        textField.resignFirstResponder()
+        return true
     }
 }
 
@@ -688,11 +839,8 @@ extension TheMealDBViewController: TheMealDBDisplayLogic {
     }
     
     func displayRecipeDetail(viewModel: ShowRecipeDetail.ViewModel) {
-        // Навигация обрабатывается в Router через DataStore
     }
 }
-
-// TheMealDBFilterViewControllerDelegate
 
 extension TheMealDBViewController: TheMealDBFilterViewControllerDelegate {
     func didApplyMealDBFilters(selectedArea: AreaWithFlag?, selectedRegion: CuisineRegion?, selectedIngredient: TheMealDBIngredient?) {

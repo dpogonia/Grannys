@@ -8,7 +8,7 @@
 import UIKit
 import Foundation
 
-class ImageLoadOperation: Operation {
+final class ImageLoadOperation: Operation, @unchecked Sendable {
     private let urlString: String
     private var completion: ((Result<UIImage, Error>) -> Void)?
     private var loadedImage: UIImage?

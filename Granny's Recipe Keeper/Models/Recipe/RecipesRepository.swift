@@ -19,7 +19,6 @@ class RecipesRepository {
         initializeDefaultCategoriesIfNeeded()
     }
     
-    // MARK: - Categories
     func getAllCategories() -> [Category] {
         let fetchRequest = NSFetchRequest<CategoryEntity>(entityName: "CategoryEntity")
         
@@ -56,16 +55,28 @@ class RecipesRepository {
     }
     
     func saveCategory(_ category: Category) {
+        var categoryToSave = category
+        
+        let orderFetchRequest = NSFetchRequest<CategoryEntity>(entityName: "CategoryEntity")
+        orderFetchRequest.sortDescriptors = [NSSortDescriptor(key: "order", ascending: false)]
+        orderFetchRequest.fetchLimit = 1
+        
         let fetchRequest = NSFetchRequest<CategoryEntity>(entityName: "CategoryEntity")
-        fetchRequest.predicate = NSPredicate(format: "id == %@", category.id as CVarArg)
+        fetchRequest.predicate = NSPredicate(format: "id == %@", categoryToSave.id as CVarArg)
         
         do {
+            if !categoryToSave.isDefault && categoryToSave.order == 0 {
+                if let maxOrderCategory = try context.fetch(orderFetchRequest).first {
+                    categoryToSave.order = maxOrderCategory.order + 1
+                }
+            }
+            
             if let existing = try context.fetch(fetchRequest).first {
-                existing.name = category.name
-                existing.isDefault = category.isDefault
-                existing.order = category.order
+                existing.name = categoryToSave.name
+                existing.isDefault = categoryToSave.isDefault
+                existing.order = categoryToSave.order
             } else {
-                _ = category.toEntity(in: context)
+                _ = categoryToSave.toEntity(in: context)
             }
             CoreDataManager.shared.saveContext()
         } catch {

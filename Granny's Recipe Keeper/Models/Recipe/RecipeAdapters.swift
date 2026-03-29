@@ -140,6 +140,7 @@ class GenericRecipeAdapter: RecipeAdapter {
             .addIngredients(ingredients)
             .addCategories(categories)
             .addTags(apiRecipe.tags ?? [])
+            .addSources(apiRecipe.sources ?? [])
             .build()
     }
     

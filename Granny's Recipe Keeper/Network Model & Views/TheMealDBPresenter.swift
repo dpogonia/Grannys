@@ -1,13 +1,7 @@
-//
-//  TheMealDBPresenter.swift
-//  Granny's Recipe Keeper
-//
-//  Created for CleanSwift (VIP) Architecture
-//
+
 
 import Foundation
 
-// ДЗ CLEANSWIFT: Presenter - форматирует данные для отображения
 // Presenter получает Response от Interactor и преобразует в ViewModel для ViewController
 
 class TheMealDBPresenter: TheMealDBPresentationLogic {
@@ -20,8 +14,10 @@ class TheMealDBPresenter: TheMealDBPresentationLogic {
         var displayedCategories: [LoadCategories.ViewModel.DisplayedCategory] = []
         
         for category in response.categories {
+            let rawName = category.strCategory ?? "Unknown"
+            let displayName = CategoryLocalization.localizedMealDBCategoryName(rawName)
             let displayedCategory = LoadCategories.ViewModel.DisplayedCategory(
-                name: category.strCategory ?? "Unknown",
+                name: displayName,
                 isSelected: false
             )
             displayedCategories.append(displayedCategory)

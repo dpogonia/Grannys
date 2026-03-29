@@ -1,9 +1,4 @@
-//
-//  RecipesModels.swift
-//  Granny's Recipe Keeper
-//
-//  Namespace для Request / Response / ViewModel сцены Recipes.
-//
+
 
 import Foundation
 

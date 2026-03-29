@@ -10,14 +10,6 @@ import UIKit
 class CategoryCollectionViewCell: UICollectionViewCell {
     static let cellIdentifier: String = "CategoryCollectionViewCell"
     
-    private let iconImageView: UIImageView = {
-        let imageView = UIImageView()
-        imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentMode = .scaleAspectFit
-        imageView.tintColor = .label
-        return imageView
-    }()
-    
     private let nameLabel: UILabel = {
         let label = UILabel()
         label.translatesAutoresizingMaskIntoConstraints = false
@@ -44,7 +36,6 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     override func prepareForReuse() {
         super.prepareForReuse()
         nameLabel.text = nil
-        iconImageView.image = nil
         applyUnselectedStyle()
     }
     
@@ -56,49 +47,12 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     
     func configure(with categoryName: String, isSelected: Bool = false) {
         nameLabel.text = categoryName
-        iconImageView.image = getIcon(for: categoryName)
         self.isSelected = isSelected
     }
     
     func configureWithEmoji(with categoryName: String, emoji: String, isSelected: Bool = false) {
         nameLabel.text = categoryName
-        iconImageView.image = getIcon(for: categoryName)
         self.isSelected = isSelected
-    }
-    
-    private func getIcon(for categoryName: String) -> UIImage? {
-        let iconName: String
-        
-        switch categoryName.lowercased() {
-        case "all recipes":
-            iconName = "list.bullet.rectangle"
-        case "breakfast":
-            iconName = "sunrise.fill"
-        case "dessert", "desserts":
-            iconName = "birthday.cake.fill"
-        case "main":
-            iconName = "fork.knife"
-        case "side":
-            iconName = "leaf.fill"
-        case "starter":
-            iconName = "sparkles"
-        case "vegan":
-            iconName = "leaf.circle.fill"
-        case "beverage", "beverages":
-            iconName = "cup.and.saucer.fill"
-        case "seafood":
-            iconName = "fish.fill"
-        case "lunch":
-            iconName = "sun.max.fill"
-        case "salad":
-            iconName = "carrot.fill"
-        case "miscellaneous":
-            iconName = "star.fill"
-        default:
-            iconName = "circle.fill"
-        }
-        
-        return UIImage(systemName: iconName)
     }
     
     private func updateSelectionState() {
@@ -110,22 +64,19 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     }
     
     private func setupUI() {
-        let stackView = UIStackView(arrangedSubviews: [iconImageView, nameLabel])
+        let stackView = UIStackView(arrangedSubviews: [nameLabel])
         stackView.translatesAutoresizingMaskIntoConstraints = false
         stackView.axis = .vertical
         stackView.alignment = .center
         stackView.spacing = 6
         
         contentView.addSubview(stackView)
-        contentView.layer.cornerRadius = 16
-        contentView.layer.borderWidth = 1
-        contentView.layer.borderColor = UIColor.systemGray4.cgColor
+        contentView.layer.cornerRadius = 12
+        contentView.layer.borderWidth = 0
+        contentView.layer.borderColor = nil
         contentView.backgroundColor = .secondarySystemBackground
         
         NSLayoutConstraint.activate([
-            iconImageView.widthAnchor.constraint(equalToConstant: 32),
-            iconImageView.heightAnchor.constraint(equalToConstant: 32),
-            
             nameLabel.leadingAnchor.constraint(equalTo: stackView.leadingAnchor, constant: 4),
             nameLabel.trailingAnchor.constraint(equalTo: stackView.trailingAnchor, constant: -4),
             
@@ -137,17 +88,22 @@ class CategoryCollectionViewCell: UICollectionViewCell {
     }
     
     private func applySelectedStyle() {
-        // Стиль как у тегов в деталях рецепта: светлый фон и тёмный текст
-        contentView.backgroundColor = .systemBlue.withAlphaComponent(0.1)
-        contentView.layer.borderColor = UIColor.systemBlue.cgColor
-        nameLabel.textColor = .systemBlue
-        iconImageView.tintColor = .systemBlue
+        contentView.backgroundColor = .secondarySystemBackground
+        
+        let text = nameLabel.text ?? ""
+        let attributes: [NSAttributedString.Key: Any] = [
+            .foregroundColor: UIColor.grannyPink,
+            .underlineStyle: NSUnderlineStyle.single.rawValue,
+            .underlineColor: UIColor.grannyPink
+        ]
+        nameLabel.attributedText = NSAttributedString(string: text, attributes: attributes)
     }
     
     private func applyUnselectedStyle() {
         contentView.backgroundColor = .secondarySystemBackground
-        contentView.layer.borderColor = UIColor.systemGray4.cgColor
+        let text = nameLabel.attributedText?.string ?? nameLabel.text ?? ""
+        nameLabel.attributedText = nil
+        nameLabel.text = text
         nameLabel.textColor = .label
-        iconImageView.tintColor = .label
     }
 }

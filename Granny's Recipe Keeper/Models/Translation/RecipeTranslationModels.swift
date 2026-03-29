@@ -35,6 +35,11 @@ enum AppLanguage: String, CaseIterable {
         }
     }
     
+    /// Короткий код языка для UI (EN, RU, FR, DE, ...)
+    var shortCode: String {
+        return String(rawValue.prefix(2)).uppercased()
+    }
+    
     /// Идентификатор для Translation API
     var localeIdentifier: String {
         switch self {
@@ -52,7 +57,7 @@ enum AppLanguage: String, CaseIterable {
     }
     
     static func fromCurrentLocale() -> AppLanguage {
-        let code = Locale.current.language.languageCode?.identifier ?? Locale.current.languageCode ?? "en"
+        let code = Locale.current.language.languageCode?.identifier ?? "en"
         
         if code.starts(with: "ru") { return .russian }
         if code.starts(with: "fr") { return .french }

@@ -66,6 +66,7 @@ class CategoriesViewController: UIViewController {
         tableView.dataSource = self
         tableView.delegate = self
         view.addSubview(tableView)
+        tableView.tintColor = .grannyPink
     }
     
     
@@ -138,6 +139,7 @@ class CategoriesViewController: UIViewController {
                     target: self,
                     action: #selector(didTapEditButton)
                 )
+                doneButton.tintColor = .grannyPink
                 rightBarButtonItems[1] = doneButton
             } else {
                 let editButton = UIBarButtonItem(
@@ -305,19 +307,19 @@ extension CategoriesViewController: UITableViewDataSource {
         
         if isFixedCategoriesHidden {
             let category = customCategories[indexPath.row]
-            cell.textLabel?.text = category.name
+            cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName(category.name)
             cell.detailTextLabel?.text = nil
             cell.accessoryType = selectedCategory?.id == category.id ? .checkmark : .none
         } else if isSpecialCategoriesHidden {
             switch indexPath.section {
             case 0:
                 let category = fixedCategories[indexPath.row]
-                cell.textLabel?.text = category.name
+                cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName(category.name)
                 cell.detailTextLabel?.text = nil
                 cell.accessoryType = selectedCategory?.id == category.id ? .checkmark : .none
             case 1:
                 let category = customCategories[indexPath.row]
-                cell.textLabel?.text = category.name
+                cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName(category.name)
                 cell.detailTextLabel?.text = nil
                 cell.accessoryType = selectedCategory?.id == category.id ? .checkmark : .none
             default:
@@ -328,27 +330,27 @@ extension CategoriesViewController: UITableViewDataSource {
             
             switch sectionType {
             case .allRecipes:
-                cell.textLabel?.text = "All Recipes"
+                cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName("All Recipes")
                 cell.detailTextLabel?.text = nil
                 
                 cell.accessoryType = selectedCategory == nil ? .checkmark : .none
                 
             case .fixedCategories:
                 let category = fixedCategories[indexPath.row]
-                cell.textLabel?.text = category.name
+                cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName(category.name)
                 cell.detailTextLabel?.text = nil
                 
                 cell.accessoryType = selectedCategory?.id == category.id ? .checkmark : .none
                 
             case .customCategories:
                 let category = customCategories[indexPath.row]
-                cell.textLabel?.text = category.name
+                cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName(category.name)
                 cell.detailTextLabel?.text = nil
                 cell.accessoryType = selectedCategory?.id == category.id ? .checkmark : .none
                 
             case .specialCategories:
                 if indexPath.row == 0 {
-                    cell.textLabel?.text = "Favorites"
+                    cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName("Favorites")
                     
                     let favoriteCount = RecipesRepository.shared.getFavoriteRecipes().count
                     
@@ -359,7 +361,7 @@ extension CategoriesViewController: UITableViewDataSource {
                     let isFavoriteSelected = selectedCategory?.id == favoriteCategoryId
                     cell.accessoryType = isFavoriteSelected ? .checkmark : .none
                 } else if indexPath.row == 1 {
-                    cell.textLabel?.text = "Archive"
+                    cell.textLabel?.text = CategoryLocalization.localizedBaseCategoryName("Archive")
                     
                     let archiveCount = RecipesRepository.shared.getAllRecipes(archived: true).count
                     
@@ -410,6 +412,7 @@ extension CategoriesViewController: UITableViewDataSource {
 
 extension CategoriesViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        Haptics.selection()
         tableView.deselectRow(at: indexPath, animated: true)
         
         if isFixedCategoriesHidden {

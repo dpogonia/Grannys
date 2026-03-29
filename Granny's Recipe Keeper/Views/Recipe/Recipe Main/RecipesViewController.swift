@@ -9,6 +9,8 @@ import UIKit
 
 class RecipesViewController: UIViewController {
     
+    weak var coordinator: RecipesCoordinating?
+    
     private var recipes: [Recipe] = []
     
     private var allCategories: [Category] = []
@@ -54,11 +56,12 @@ class RecipesViewController: UIViewController {
     }()
     
     private let filterButton: UIBarButtonItem = {
-        return UIBarButtonItem(image: UIImage(systemName: "line.3.horizontal.decrease.circle"), style: .plain, target: nil, action: nil)
+        return UIBarButtonItem(image: UIImage(systemName: "gearshape"), style: .plain, target: nil, action: nil)
     }()
     
     private let mealDBButton: UIBarButtonItem = {
-        return UIBarButtonItem(image: UIImage(systemName: "globe"), style: .plain, target: nil, action: nil)
+        // Используем кастрюлю/сковороду как иконку для DBMeal
+        return UIBarButtonItem(image: UIImage(systemName: "frying.pan"), style: .plain, target: nil, action: nil)
     }()
     
     private var emptyStateView: UIView!
@@ -103,36 +106,48 @@ class RecipesViewController: UIViewController {
     override func viewWillAppear(_ animated: Bool) {
         super.viewWillAppear(animated)
         loadRecipes()
+        
+        // Выравниваем стиль навбара с TheMealDBViewController
+        let backgroundColor: UIColor = .systemBackground
+        view.backgroundColor = backgroundColor
+        
+        if let navController = navigationController {
+            navController.view.backgroundColor = backgroundColor
+            
+            if #available(iOS 15.0, *) {
+                let appearance = UINavigationBarAppearance()
+                appearance.configureWithOpaqueBackground()
+                appearance.backgroundColor = backgroundColor
+                appearance.shadowColor = .clear
+                
+                navController.navigationBar.standardAppearance = appearance
+                navController.navigationBar.scrollEdgeAppearance = appearance
+                navController.navigationBar.compactAppearance = appearance
+            } else {
+                navController.navigationBar.isTranslucent = false
+                navController.navigationBar.barTintColor = backgroundColor
+                navController.navigationBar.shadowImage = UIImage()
+                navController.navigationBar.setBackgroundImage(UIImage(), for: .default)
+            }
+        }
     }
     
     private let transitionDelegate = TransitionDelegate()
     
     @objc private func didTapCategoryButton() {
-        let categoriesVC = CategoriesViewController()
-        categoriesVC.delegate = self
-        categoriesVC.selectedCategory = selectedCategory
-        navigationController?.pushViewController(categoriesVC, animated: true)
+        coordinator?.showCategories(selectedCategory: selectedCategory)
     }
     
     @objc private func didTapAddButton() {
-        let editVC = RecipeEditViewController()
-        editVC.delegate = self
-        navigationController?.pushViewController(editVC, animated: true)
+        coordinator?.showCreateRecipe()
     }
     
     @objc private func didTapFilterButton() {
-        let filterVC = FilterViewController(selectedTags: filterTags, selectedDifficulty: filterDifficulty)
-        filterVC.delegate = self
-        let navController = UINavigationController(rootViewController: filterVC)
-        present(navController, animated: true)
+        coordinator?.showFilters(selectedTags: filterTags, selectedDifficulty: filterDifficulty)
     }
     
     @objc private func didTapMealDBButton() {
-        let mealDBVC = TheMealDBViewController()
-        let navController = UINavigationController(rootViewController: mealDBVC)
-        
-        navController.modalPresentationStyle = .fullScreen
-        present(navController, animated: true)
+        coordinator?.showMealDB()
     }
     
     @objc private func refreshRecipes() {
@@ -274,9 +289,13 @@ private extension RecipesViewController {
     }
     
     func updateCategoryButtonTitle() {
-        let (titleText, iconImage) = getCategoryTitleAndIcon()
-        let attributedTitle = createAttributedTitle(text: titleText, icon: iconImage)
-        categoryButton.setAttributedTitle(attributedTitle, for: .normal)
+        let (titleText, _) = getCategoryTitleAndIcon()
+        // Показываем только текст без иконки
+        categoryButton.setAttributedTitle(nil, for: .normal)
+        categoryButton.setTitle(titleText, for: .normal)
+        categoryButton.titleLabel?.font = UIFont.systemFont(ofSize: 20, weight: .semibold)
+        // Стандартный цвет заголовка в стиле Apple
+        categoryButton.setTitleColor(.label, for: .normal)
         categoryButton.frame = CGRect(x: 0, y: 0, width: 250, height: 44)
     }
     
@@ -290,16 +309,16 @@ private extension RecipesViewController {
         let iconImage: UIImage?
         
         if isFavoriteSelected {
-            titleText = "FAVORITES"
+            titleText = CategoryLocalization.localizedBaseCategoryName("Favorites").uppercased()
             iconImage = UIImage(systemName: "heart.fill")
         } else if isArchiveSelected {
-            titleText = "ARCHIVE"
+            titleText = CategoryLocalization.localizedBaseCategoryName("Archive").uppercased()
             iconImage = UIImage(systemName: "archivebox.fill")
         } else if let category = selectedCategory {
-            titleText = category.name.uppercased()
+            titleText = CategoryLocalization.localizedBaseCategoryName(category.name).uppercased()
             iconImage = UIImage(systemName: "fork.knife")
         } else {
-            titleText = "ALL RECIPES"
+            titleText = CategoryLocalization.localizedBaseCategoryName("All Recipes").uppercased()
             iconImage = UIImage(systemName: "fork.knife")
         }
         
@@ -338,11 +357,13 @@ private extension RecipesViewController {
         tableView.refreshControl = refreshControl
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.separatorStyle = .none
     }
     
     func setupNavigationBar() {
         navigationItem.titleView = categoryButton
-        navigationItem.rightBarButtonItems = [addButton, mealDBButton, filterButton]
+        // Порядок справа налево: +, Settings, DBMeal (chef icon)
+        navigationItem.rightBarButtonItems = [addButton, filterButton, mealDBButton]
         navigationItem.searchController = searchController
         navigationItem.hidesSearchBarWhenScrolling = false
         searchController.searchResultsUpdater = self
@@ -426,13 +447,10 @@ extension RecipesViewController: UITableViewDelegate {
     }
     
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        Haptics.lightImpact()
         tableView.deselectRow(at: indexPath, animated: true)
         
         let selectedRecipe = recipes[indexPath.row]
-        
-        let detailViewController = RecipeDetailViewController(recipe: selectedRecipe)
-        
-        detailViewController.delegate = self
         
         if let cell = tableView.cellForRow(at: indexPath) {
             cell.alpha = 0.5
@@ -440,8 +458,7 @@ extension RecipesViewController: UITableViewDelegate {
                 cell.alpha = 1.0
             }
         }
-        
-        navigationController?.pushViewController(detailViewController, animated: true)
+        coordinator?.showRecipeDetail(recipe: selectedRecipe)
     }
     
     func tableView(_ tableView: UITableView, commit editingStyle: UITableViewCell.EditingStyle, forRowAt indexPath: IndexPath) {
@@ -459,18 +476,44 @@ extension RecipesViewController: UITableViewDelegate {
         let isFavorite = recipe.isFavorite
         
         let favoriteAction = UIContextualAction(style: .normal, title: nil) { [weak self] (action, view, completionHandler) in
-            RecipesRepository.shared.toggleFavorite(recipe)
+            guard let self = self else {
+                completionHandler(false)
+                return
+            }
+            
+            let favoriteCommand = ToggleFavoriteCommand(recipe: recipe)
+            CommandManager.shared.execute(command: favoriteCommand)
             
             if let updatedRecipe = RecipesRepository.shared.getRecipe(by: recipe.id) {
-                self?.recipes[indexPath.row] = updatedRecipe
-                tableView.reloadRows(at: [indexPath], with: .none)
+                let favoriteCategoryId = UUID(uuidString: "00000000-0000-0000-0000-000000000001")
+                let isFavoritesList = self.selectedCategory?.id == favoriteCategoryId
+                
+                if isFavoritesList && !updatedRecipe.isFavorite {
+                    // Если находимся в списке избранного и рецепт снят с избранного,
+                    // сразу удаляем его из таблицы
+                    self.recipes.remove(at: indexPath.row)
+                    tableView.deleteRows(at: [indexPath], with: .automatic)
+                    self.updateEmptyState()
+                } else {
+                    // В остальных списках просто обновляем состояние ячейки
+                    self.recipes[indexPath.row] = updatedRecipe
+                    tableView.reloadRows(at: [indexPath], with: .none)
+                }
+                
+                // Показываем Snackbar с возможностью отмены
+                self.showSnackbar(message: favoriteCommand.description) { [weak self] in
+                    guard let self = self else { return }
+                    if let _ = CommandManager.shared.undo() {
+                        self.reloadRecipes()
+                    }
+                }
             }
             
             completionHandler(true)
         }
         
         favoriteAction.image = UIImage(systemName: isFavorite ? "heart.slash.fill" : "heart.fill")
-        favoriteAction.backgroundColor = isFavorite ? .systemGray : .systemRed
+        favoriteAction.backgroundColor = isFavorite ? .systemGray : .grannyPink
         
         return UISwipeActionsConfiguration(actions: [favoriteAction])
     }
@@ -501,8 +544,23 @@ extension RecipesViewController: UITableViewDelegate {
     
     private func createUnarchiveAction(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UIContextualAction {
         let action = UIContextualAction(style: .normal, title: nil) { [weak self] (_, _, completionHandler) in
-            RecipesRepository.shared.unarchiveRecipe(recipe)
-            self?.removeRecipe(at: indexPath, in: tableView)
+            guard let self = self else {
+                completionHandler(false)
+                return
+            }
+            
+            let command = ArchiveRecipeCommand(recipe: recipe)
+            CommandManager.shared.execute(command: command)
+            
+            self.removeRecipe(at: indexPath, in: tableView)
+            
+            self.showSnackbar(message: command.description) { [weak self] in
+                guard let self = self else { return }
+                if let _ = CommandManager.shared.undo() {
+                    self.reloadRecipes()
+                }
+            }
+            
             completionHandler(true)
         }
         action.image = UIImage(systemName: "tray.and.arrow.up.fill")
@@ -512,8 +570,23 @@ extension RecipesViewController: UITableViewDelegate {
     
     private func createArchiveAction(for recipe: Recipe, at indexPath: IndexPath, in tableView: UITableView) -> UIContextualAction {
         let action = UIContextualAction(style: .normal, title: nil) { [weak self] (_, _, completionHandler) in
-            RecipesRepository.shared.archiveRecipe(recipe)
-            self?.removeRecipe(at: indexPath, in: tableView)
+            guard let self = self else {
+                completionHandler(false)
+                return
+            }
+            
+            let command = ArchiveRecipeCommand(recipe: recipe)
+            CommandManager.shared.execute(command: command)
+            
+            self.removeRecipe(at: indexPath, in: tableView)
+            
+            self.showSnackbar(message: command.description) { [weak self] in
+                guard let self = self else { return }
+                if let _ = CommandManager.shared.undo() {
+                    self.reloadRecipes()
+                }
+            }
+            
             completionHandler(true)
         }
         action.image = UIImage(systemName: "archivebox.fill")

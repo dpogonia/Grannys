@@ -7,10 +7,17 @@
 
 import UIKit
 
-// MARK: - RecipeEditInstructionsCell
-
 class RecipeEditInstructionsCell: UITableViewCell {
     static let identifier = "RecipeEditInstructionsCell"
+    
+    private let containerView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .systemBackground
+        view.layer.cornerRadius = 12
+        view.layer.masksToBounds = true
+        return view
+    }()
     
     let textView: UITextView = {
         let textView = UITextView()
@@ -42,16 +49,22 @@ class RecipeEditInstructionsCell: UITableViewCell {
     }
     
     private func setupUI() {
-        contentView.addSubview(textView)
-        contentView.addSubview(placeholderLabel)
+        contentView.addSubview(containerView)
+        containerView.addSubview(textView)
+        containerView.addSubview(placeholderLabel)
         selectionStyle = .none
         
         NSLayoutConstraint.activate([
-            textView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
-            textView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            textView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            textView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
-            textView.heightAnchor.constraint(greaterThanOrEqualToConstant: 60),
+            containerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 0),
+            containerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            containerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            containerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            
+            textView.topAnchor.constraint(equalTo: containerView.topAnchor, constant: 8),
+            textView.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 12),
+            textView.trailingAnchor.constraint(equalTo: containerView.trailingAnchor, constant: -12),
+            textView.bottomAnchor.constraint(equalTo: containerView.bottomAnchor, constant: -8),
+            textView.heightAnchor.constraint(greaterThanOrEqualToConstant: 80),
             
             placeholderLabel.leadingAnchor.constraint(equalTo: textView.leadingAnchor),
             placeholderLabel.topAnchor.constraint(equalTo: textView.topAnchor, constant: 8)

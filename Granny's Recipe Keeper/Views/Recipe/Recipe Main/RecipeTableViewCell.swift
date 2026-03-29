@@ -42,18 +42,6 @@ class RecipeTableViewCell: UITableViewCell {
         return view
     }()
     
-    private let gradientLayer: CAGradientLayer = {
-        let gradient = CAGradientLayer()
-        gradient.colors = [
-            UIColor.systemBlue.withAlphaComponent(0.1).cgColor,
-            UIColor.systemPurple.withAlphaComponent(0.05).cgColor
-        ]
-        gradient.startPoint = CGPoint(x: 0, y: 0)
-        gradient.endPoint = CGPoint(x: 1, y: 1)
-        gradient.cornerRadius = 16
-        return gradient
-    }()
-    
     private var currentLoadOperation: Operation?
     
     func configure(with recipe: Recipe) {
@@ -126,16 +114,15 @@ class RecipeTableViewCell: UITableViewCell {
     
     private func setupUI() {
         contentView.addSubview(cardContainerView)
-        cardContainerView.layer.insertSublayer(gradientLayer, at: 0)
         
         cardContainerView.addSubview(recipeImageView)
         cardContainerView.addSubview(nameLabel)
         
         NSLayoutConstraint.activate([
-            cardContainerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 8),
+            cardContainerView.topAnchor.constraint(equalTo: contentView.topAnchor, constant: 4),
             cardContainerView.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
             cardContainerView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            cardContainerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -8),
+            cardContainerView.bottomAnchor.constraint(equalTo: contentView.bottomAnchor, constant: -4),
             
             recipeImageView.leadingAnchor.constraint(equalTo: cardContainerView.leadingAnchor, constant: 12),
             recipeImageView.centerYAnchor.constraint(equalTo: cardContainerView.centerYAnchor),
@@ -150,7 +137,6 @@ class RecipeTableViewCell: UITableViewCell {
     
     override func layoutSubviews() {
         super.layoutSubviews()
-        gradientLayer.frame = cardContainerView.bounds
     }
 }
 

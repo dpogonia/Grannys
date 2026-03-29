@@ -2,7 +2,6 @@
 //  TheMealDBIngredientCategorizer.swift
 //  Granny's Recipe Keeper
 //
-//  Helper class for organizing ingredients into categories
 //
 
 import Foundation

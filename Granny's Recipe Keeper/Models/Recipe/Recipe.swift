@@ -39,7 +39,26 @@ struct Recipe {
     
     var tags: [String]
     
-    init(id: UUID = UUID(), name: String, recipeInstructions: String? = nil, imageData: Data? = nil, imageURL: String? = nil, ingredients: [Ingredient] = [], categories: [Category] = [], isArchived: Bool = false, isFavorite: Bool = false, createdAt: Date = Date(), cookingTime: Int? = nil, servings: Int? = nil, difficulty: String? = nil, calories: Int? = nil, tags: [String] = []) {
+    var sources: [String]
+    
+    init(
+        id: UUID = UUID(),
+        name: String,
+        recipeInstructions: String? = nil,
+        imageData: Data? = nil,
+        imageURL: String? = nil,
+        ingredients: [Ingredient] = [],
+        categories: [Category] = [],
+        isArchived: Bool = false,
+        isFavorite: Bool = false,
+        createdAt: Date = Date(),
+        cookingTime: Int? = nil,
+        servings: Int? = nil,
+        difficulty: String? = nil,
+        calories: Int? = nil,
+        tags: [String] = [],
+        sources: [String] = []
+    ) {
         self.id = id
         self.name = name
         self.recipeInstructions = recipeInstructions
@@ -55,6 +74,7 @@ struct Recipe {
         self.difficulty = difficulty
         self.calories = calories
         self.tags = tags
+        self.sources = sources
     }
     
     var image: UIImage? {
@@ -120,6 +140,10 @@ extension Recipe {
         self.calories = entity.calories as? Int
         
         self.tags = entity.tags?.components(separatedBy: ",").filter { !$0.isEmpty } ?? []
+        self.sources = entity.sources?
+            .components(separatedBy: "\n")
+            .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .filter { !$0.isEmpty } ?? []
         
         if let ingredientsSet = entity.ingredients as? Set<IngredientEntity> {
             self.ingredients = ingredientsSet.compactMap { Ingredient(from: $0) }
@@ -160,6 +184,7 @@ extension Recipe {
         recipeEntity.calories = calories as NSNumber?
         
         recipeEntity.tags = tags.isEmpty ? nil : tags.joined(separator: ",")
+        recipeEntity.sources = sources.isEmpty ? nil : sources.joined(separator: "\n")
         
         let ingredientsSet = NSMutableSet()
         
@@ -276,6 +301,7 @@ class RecipeBuilder {
     private var difficulty: String?
     private var calories: Int?
     private var tags: [String] = []
+    private var sources: [String] = []
     
     init(name: String) {
         self.name = name
@@ -392,6 +418,22 @@ class RecipeBuilder {
         return self
     }
     
+    func addSource(_ source: String) -> RecipeBuilder {
+        let trimmed = source.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return self }
+        if !sources.contains(trimmed) {
+            sources.append(trimmed)
+        }
+        return self
+    }
+    
+    func addSources(_ sources: [String]) -> RecipeBuilder {
+        for source in sources {
+            _ = addSource(source)
+        }
+        return self
+    }
+    
     func build() -> Recipe {
         return Recipe(
             id: id,
@@ -408,7 +450,8 @@ class RecipeBuilder {
             servings: servings,
             difficulty: difficulty,
             calories: calories,
-            tags: tags
+            tags: tags,
+            sources: sources
         )
     }
 }
@@ -429,6 +472,7 @@ extension Recipe {
             .addIngredients(recipe.ingredients)
             .addCategories(recipe.categories)
             .addTags(recipe.tags)
+            .addSources(recipe.sources)
     }
     
     // Создать новый Builder с указанным названием

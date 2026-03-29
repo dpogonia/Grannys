@@ -52,6 +52,7 @@ struct APIRecipe: Codable {
     let instructions: String?
     let extendedIngredients: [APIIngredient]?
     let tags: [String]?
+    let sources: [String]?
     let cookingTime: Int?
     let servings: Int?
     let difficulty: String?
@@ -65,6 +66,7 @@ struct APIRecipe: Codable {
         case instructions
         case extendedIngredients
         case tags
+        case sources
         case cookingTime
         case servings
         case difficulty
@@ -105,7 +107,10 @@ class RecipesAPIService {
     // MARK: - Unsplash API
     
     private let unsplashBaseURL = "https://api.unsplash.com"
-    private let unsplashAccessKey = "YOUR_UNSPLASH_ACCESS_KEY"
+    
+    private var unsplashAccessKey: String {
+        Bundle.main.object(forInfoDictionaryKey: "UNSPLASH_ACCESS_KEY") as? String ?? ""
+    }
     
     func searchUnsplashImages(query: String, completion: @escaping (Result<[UnsplashPhoto], Error>) -> Void) {
         var components = URLComponents(string: "\(unsplashBaseURL)/search/photos")!
@@ -152,19 +157,12 @@ class RecipesAPIService {
                 return
             }
             
-            Task.detached {
+            Task { @MainActor in
                 do {
-                    
-                    // JSONDecoder для декодирования JSON в Swift объекты (Codable)
                     let searchResponse = try JSONDecoder().decode(UnsplashSearchResponse.self, from: data)
-                    let photos = searchResponse.results
-                    await MainActor.run {
-                        completion(.success(photos))
-                    }
+                    completion(.success(searchResponse.results))
                 } catch {
-                    await MainActor.run {
-                        completion(.failure(error))
-                    }
+                    completion(.failure(error))
                 }
             }
         }.resume()
@@ -217,7 +215,8 @@ class RecipesAPIService {
             servings: apiRecipe.servings,
             difficulty: apiRecipe.difficulty,
             calories: apiRecipe.calories,
-            tags: apiRecipe.tags ?? []
+            tags: apiRecipe.tags ?? [],
+            sources: apiRecipe.sources ?? []
         )
     }
 }

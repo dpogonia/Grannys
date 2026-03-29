@@ -88,6 +88,7 @@ class CategoriesSelectionViewController: UIViewController {
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "CategoryCell")
         tableView.dataSource = self
         tableView.delegate = self
+        tableView.tintColor = .grannyPink
     }
     
     private func setupConstraints() {
@@ -116,6 +117,7 @@ extension CategoriesSelectionViewController: UITableViewDataSource {
 
 extension CategoriesSelectionViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        Haptics.selection()
         tableView.deselectRow(at: indexPath, animated: true)
         
         let category = allCategories[indexPath.row]

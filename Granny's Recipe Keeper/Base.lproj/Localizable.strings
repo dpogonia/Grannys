@@ -1,0 +1,26 @@
+"settings_title" = "Settings";
+"settings_section_difficulty" = "Difficulty";
+"settings_section_tags" = "Tags";
+"settings_section_ingredients" = "Ingredients";
+"settings_section_translation" = "Translation";
+"settings_section_data" = "Data";
+"settings_section_app_language" = "App language";
+
+"settings_difficulty_easy" = "Easy";
+"settings_difficulty_medium" = "Medium";
+"settings_difficulty_hard" = "Hard";
+
+"common_ok" = "OK";
+
+"export_nothing_title" = "Nothing to export";
+"export_nothing_message" = "There are no recipes to export.";
+"export_failed_title" = "Export failed";
+
+"import_completed_title" = "Import completed";
+"import_completed_single" = "1 recipe imported.";
+"import_completed_many" = "%d recipes imported.";
+"import_failed_title" = "Import failed";
+
+"settings_export_json" = "Export recipes (JSON)";
+"settings_export_csv" = "Export recipes (CSV)";
+"settings_import" = "Import recipes (JSON / CSV)";

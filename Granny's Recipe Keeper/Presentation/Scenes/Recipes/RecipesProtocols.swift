@@ -1,9 +1,4 @@
-//
-//  RecipesProtocols.swift
-//  Granny's Recipe Keeper
-//
-//  Created as part of VIP (Clean Swift) refactoring.
-//
+
 
 import Foundation
 

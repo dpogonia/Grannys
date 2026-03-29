@@ -26,6 +26,7 @@ class SnackbarView: UIView {
         button.setTitle("UNDO", for: .normal)
         button.setTitleColor(.systemYellow, for: .normal)
         button.titleLabel?.font = .systemFont(ofSize: 14, weight: .bold)
+        button.contentHorizontalAlignment = .right
         return button
     }()
 
@@ -55,17 +56,24 @@ class SnackbarView: UIView {
         addSubview(messageLabel)
         addSubview(undoButton)
 
+        // Чтобы кнопка UNDO была прижата к правому краю,
+        // а текст сообщения ужимался при нехватке места
+        messageLabel.setContentCompressionResistancePriority(.defaultLow, for: .horizontal)
+        messageLabel.setContentHuggingPriority(.defaultLow, for: .horizontal)
+        undoButton.setContentCompressionResistancePriority(.required, for: .horizontal)
+        undoButton.setContentHuggingPriority(.required, for: .horizontal)
+
         undoButton.addTarget(self, action: #selector(didTapUndo), for: .touchUpInside)
 
         NSLayoutConstraint.activate([
             messageLabel.leadingAnchor.constraint(equalTo: leadingAnchor, constant: 16),
             messageLabel.centerYAnchor.constraint(equalTo: centerYAnchor),
-
-            undoButton.leadingAnchor.constraint(equalTo: messageLabel.trailingAnchor, constant: 16),
+            messageLabel.trailingAnchor.constraint(lessThanOrEqualTo: undoButton.leadingAnchor, constant: -16),
+            
             undoButton.trailingAnchor.constraint(equalTo: trailingAnchor, constant: -16),
             undoButton.centerYAnchor.constraint(equalTo: centerYAnchor),
             undoButton.widthAnchor.constraint(greaterThanOrEqualToConstant: 50),
-
+            
             heightAnchor.constraint(equalToConstant: 48)
         ])
     }

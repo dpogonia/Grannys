@@ -7,6 +7,8 @@
 
 import UIKit
 import CoreData
+import FirebaseCore
+import FirebaseAnalytics
 
 @main
 class AppDelegate: UIResponder, UIApplicationDelegate {
@@ -15,6 +17,14 @@ class AppDelegate: UIResponder, UIApplicationDelegate {
         _ = CoreDataManager.shared
         
         addMockDataIfNeeded()
+        
+        FirebaseApp.configure()
+        
+#if DEBUG
+    
+    Analytics.setAnalyticsCollectionEnabled(true)
+    Analytics.logEvent(AnalyticsEventAppOpen, parameters: nil)
+    #endif
         
         return true
     }

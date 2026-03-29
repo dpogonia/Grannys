@@ -22,8 +22,6 @@ public struct AreaWithFlag {
     }
 }
 
-// MARK: - Area to Country Mapping
-
 // Маппинг областей TheMealDB к кодам стран для отображения флагов
 public struct AreaCountryMapper {
     

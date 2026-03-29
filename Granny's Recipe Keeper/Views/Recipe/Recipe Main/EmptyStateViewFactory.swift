@@ -16,7 +16,7 @@ class EmptyStateViewFactory {
         let iconImageView = UIImageView()
         iconImageView.translatesAutoresizingMaskIntoConstraints = false
         iconImageView.image = UIImage(systemName: "fork.knife.circle.fill")
-        iconImageView.tintColor = .systemBlue
+        iconImageView.tintColor = .grannyPink
         iconImageView.contentMode = .scaleAspectFit
         iconImageView.tag = 999
         
@@ -40,9 +40,9 @@ class EmptyStateViewFactory {
         addButton.setTitle("Add Recipe", for: .normal)
         addButton.titleLabel?.font = .systemFont(ofSize: 17, weight: .semibold)
         addButton.setTitleColor(.white, for: .normal)
-        addButton.backgroundColor = .systemBlue
+        addButton.backgroundColor = .grannyPink
         addButton.layer.cornerRadius = 12
-        addButton.layer.shadowColor = UIColor.systemBlue.cgColor
+        addButton.layer.shadowColor = UIColor.grannyPink.cgColor
         addButton.layer.shadowOffset = CGSize(width: 0, height: 4)
         addButton.layer.shadowRadius = 8
         addButton.layer.shadowOpacity = 0.3
@@ -56,8 +56,8 @@ class EmptyStateViewFactory {
         NSLayoutConstraint.activate([
             iconImageView.centerXAnchor.constraint(equalTo: containerView.centerXAnchor),
             iconImageView.centerYAnchor.constraint(equalTo: containerView.centerYAnchor),
-            iconImageView.widthAnchor.constraint(equalToConstant: 240),
-            iconImageView.heightAnchor.constraint(equalToConstant: 240),
+            iconImageView.widthAnchor.constraint(equalToConstant: 120),
+            iconImageView.heightAnchor.constraint(equalToConstant: 120),
             
             titleLabel.topAnchor.constraint(equalTo: iconImageView.bottomAnchor, constant: 40),
             titleLabel.leadingAnchor.constraint(equalTo: containerView.leadingAnchor, constant: 32),
@@ -77,6 +77,15 @@ class EmptyStateViewFactory {
         titleLabel.alpha = 0
         messageLabel.alpha = 0
         addButton.alpha = 0
+        
+        // Добавляем мягкую пульсацию иконки, когда нет рецептов
+        let pulse = CABasicAnimation(keyPath: "transform.scale")
+        pulse.fromValue = 1.0
+        pulse.toValue = 1.08
+        pulse.duration = 1.4
+        pulse.autoreverses = true
+        pulse.repeatCount = .infinity
+        iconImageView.layer.add(pulse, forKey: "granny.emptyState.pulse")
         
         return containerView
     }

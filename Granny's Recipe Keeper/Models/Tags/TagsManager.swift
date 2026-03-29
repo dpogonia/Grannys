@@ -29,7 +29,7 @@ class TagsManager {
     ]
     
     private init() {}
-    
+        
     func getCustomTags() -> [String] {
         return UserDefaults.standard.array(forKey: customTagsKey) as? [String] ?? []
     }
@@ -62,11 +62,22 @@ class TagsManager {
         guard !trimmedNewName.isEmpty else { return }
         
         var customTags = getCustomTags()
+        var deletedTags = getDeletedTags()
+        
         if let index = customTags.firstIndex(of: oldName) {
             customTags[index] = trimmedNewName
-            customTags.sort()
-            UserDefaults.standard.set(customTags, forKey: customTagsKey)
+        } else if defaultTags.contains(oldName) {
+            deletedTags.insert(oldName)
+            if !customTags.contains(trimmedNewName) {
+                customTags.append(trimmedNewName)
+            }
+        } else if !customTags.contains(trimmedNewName) {
+            customTags.append(trimmedNewName)
         }
+        
+        customTags.sort()
+        UserDefaults.standard.set(customTags, forKey: customTagsKey)
+        UserDefaults.standard.set(Array(deletedTags), forKey: deletedTagsKey)
         
         let allRecipes = RecipesRepository.shared.getAllRecipes(archived: false)
         for recipe in allRecipes {
@@ -87,6 +98,20 @@ class TagsManager {
         return Set(array)
     }
     
+    func setCustomTags(_ tags: [String]) {
+        let sorted = tags.sorted()
+        UserDefaults.standard.set(sorted, forKey: customTagsKey)
+    }
+    
+    func setDeletedTags(_ tags: Set<String>) {
+        UserDefaults.standard.set(Array(tags), forKey: deletedTagsKey)
+    }
+    
+    func restoreState(customTags: [String], deletedTags: Set<String>) {
+        setCustomTags(customTags)
+        setDeletedTags(deletedTags)
+    }
+    
     func getAllAvailableTags() -> [String] {
         let customTags = getCustomTags()
         let deletedTags = getDeletedTags()
@@ -99,9 +124,11 @@ class TagsManager {
     func getAllTagsFromRecipes() -> [String] {
         let allRecipes = RecipesRepository.shared.getAllRecipes(archived: false)
         var tagsSet: Set<String> = []
+        let deletedTags = getDeletedTags()
         
         for recipe in allRecipes {
             for tag in recipe.tags {
+                guard !deletedTags.contains(tag) else { continue }
                 tagsSet.insert(tag)
             }
         }

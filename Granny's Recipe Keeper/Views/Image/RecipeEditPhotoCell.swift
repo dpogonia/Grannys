@@ -13,7 +13,7 @@ class RecipeEditPhotoCell: UITableViewCell {
     let photoImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.contentMode = .scaleAspectFit
+        imageView.contentMode = .scaleAspectFill
         imageView.clipsToBounds = true
         imageView.backgroundColor = .clear
         imageView.layer.cornerRadius = 8
@@ -24,14 +24,43 @@ class RecipeEditPhotoCell: UITableViewCell {
     let addPhotoImageView: UIImageView = {
         let imageView = UIImageView()
         imageView.translatesAutoresizingMaskIntoConstraints = false
-        imageView.image = UIImage(named: "default")
-        imageView.contentMode = .scaleAspectFill
-        imageView.backgroundColor = .secondarySystemBackground
+        imageView.image = nil
+        imageView.contentMode = .center
+        imageView.backgroundColor = .clear
         imageView.layer.cornerRadius = 8
         imageView.clipsToBounds = true
         imageView.isUserInteractionEnabled = true
         return imageView
     }()
+    
+    private let placeholderIconImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.image = UIImage(systemName: "photo")
+        imageView.tintColor = .systemGray3
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+    
+    private let plusBadgeView: UIView = {
+        let view = UIView()
+        view.translatesAutoresizingMaskIntoConstraints = false
+        view.backgroundColor = .systemGray3
+        view.layer.cornerRadius = 10
+        view.layer.masksToBounds = true
+        return view
+    }()
+    
+    private let plusBadgeImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.image = UIImage(systemName: "plus")
+        imageView.tintColor = .systemBackground
+        imageView.contentMode = .scaleAspectFit
+        return imageView
+    }()
+    
+    private var dashedBorderLayer: CAShapeLayer?
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
         super.init(style: style, reuseIdentifier: reuseIdentifier)
@@ -46,9 +75,17 @@ class RecipeEditPhotoCell: UITableViewCell {
     private var buttonTopToImageConstraint: NSLayoutConstraint!
     private var buttonTopToContentViewConstraint: NSLayoutConstraint!
     
+    override func layoutSubviews() {
+        super.layoutSubviews()
+        updateDashedBorder()
+    }
+    
     private func setupUI() {
         contentView.addSubview(photoImageView)
         contentView.addSubview(addPhotoImageView)
+        addPhotoImageView.addSubview(placeholderIconImageView)
+        addPhotoImageView.addSubview(plusBadgeView)
+        plusBadgeView.addSubview(plusBadgeImageView)
         selectionStyle = .none
         
         imageHeightConstraint = photoImageView.heightAnchor.constraint(equalToConstant: 0)
@@ -72,6 +109,41 @@ class RecipeEditPhotoCell: UITableViewCell {
             contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 104),
             contentHeightConstraint
         ])
+        
+        NSLayoutConstraint.activate([
+            placeholderIconImageView.topAnchor.constraint(equalTo: addPhotoImageView.topAnchor, constant: 12),
+            placeholderIconImageView.leadingAnchor.constraint(equalTo: addPhotoImageView.leadingAnchor, constant: 12),
+            placeholderIconImageView.trailingAnchor.constraint(equalTo: addPhotoImageView.trailingAnchor, constant: -12),
+            placeholderIconImageView.bottomAnchor.constraint(equalTo: addPhotoImageView.bottomAnchor, constant: -12),
+            
+            plusBadgeView.trailingAnchor.constraint(equalTo: addPhotoImageView.trailingAnchor, constant: -6),
+            plusBadgeView.bottomAnchor.constraint(equalTo: addPhotoImageView.bottomAnchor, constant: -6),
+            plusBadgeView.widthAnchor.constraint(equalToConstant: 20),
+            plusBadgeView.heightAnchor.constraint(equalToConstant: 20),
+            
+            plusBadgeImageView.centerXAnchor.constraint(equalTo: plusBadgeView.centerXAnchor),
+            plusBadgeImageView.centerYAnchor.constraint(equalTo: plusBadgeView.centerYAnchor),
+            plusBadgeImageView.widthAnchor.constraint(equalToConstant: 10),
+            plusBadgeImageView.heightAnchor.constraint(equalToConstant: 10)
+        ])
+        
+        // Значок "+" больше не используем визуально
+        plusBadgeView.isHidden = true
+        plusBadgeImageView.isHidden = true
+    }
+    
+    private func updateDashedBorder() {
+        dashedBorderLayer?.removeFromSuperlayer()
+        
+        let shapeLayer = CAShapeLayer()
+        shapeLayer.strokeColor = UIColor.systemGray4.cgColor
+        shapeLayer.fillColor = UIColor.clear.cgColor
+        shapeLayer.lineDashPattern = [6, 3]
+        shapeLayer.lineWidth = 1
+        shapeLayer.path = UIBezierPath(roundedRect: addPhotoImageView.bounds, cornerRadius: 8).cgPath
+        
+        addPhotoImageView.layer.addSublayer(shapeLayer)
+        dashedBorderLayer = shapeLayer
     }
     
     func configure(hasImage: Bool) {
@@ -79,16 +151,17 @@ class RecipeEditPhotoCell: UITableViewCell {
             photoImageView.isHidden = false
             imageHeightConstraint.constant = 88
             addPhotoImageView.isHidden = true
+            placeholderIconImageView.isHidden = true
             photoImageView.isUserInteractionEnabled = true
-            buttonTopToContentViewConstraint.isActive = false
-            buttonTopToImageConstraint.isActive = false
         } else {
             photoImageView.isHidden = true
             imageHeightConstraint.constant = 0
             addPhotoImageView.isHidden = false
+            placeholderIconImageView.isHidden = false
             photoImageView.isUserInteractionEnabled = false
-            buttonTopToImageConstraint.isActive = false
-            buttonTopToContentViewConstraint.isActive = true
         }
+        
+        setNeedsLayout()
+        layoutIfNeeded()
     }
 }

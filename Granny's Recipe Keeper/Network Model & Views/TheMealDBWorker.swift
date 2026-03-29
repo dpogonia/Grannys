@@ -2,7 +2,6 @@
 //  TheMealDBWorker.swift
 //  Granny's Recipe Keeper
 //
-//  Created for CleanSwift (VIP) Architecture
 //
 
 import Foundation

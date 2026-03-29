@@ -1,9 +1,3 @@
-//
-//  UnsplashImageSearchViewController.swift
-//  Granny's
-//
-//  Created by Dmitrii Pogonia on 17.12.2025.
-//
 
 import UIKit
 
@@ -169,6 +163,7 @@ extension UnsplashImageSearchViewController: UICollectionViewDataSource {
 
 extension UnsplashImageSearchViewController: UICollectionViewDelegate {
     func collectionView(_ collectionView: UICollectionView, didSelectItemAt indexPath: IndexPath) {
+        Haptics.lightImpact()
         let photo = photos[indexPath.item]
         let imageURL = photo.urls.regular
         

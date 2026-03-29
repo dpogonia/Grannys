@@ -10,11 +10,30 @@ import UIKit
 class RecipeEditDifficultyCell: UITableViewCell {
     static let identifier = "RecipeEditDifficultyCell"
     
-    let segmentedControl: UISegmentedControl = {
-        let items = ["Easy", "Medium", "Hard"]
-        let control = UISegmentedControl(items: items)
-        control.translatesAutoresizingMaskIntoConstraints = false
-        return control
+    private let titleLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.text = "Difficulty"
+        label.font = .systemFont(ofSize: 17)
+        return label
+    }()
+    
+    private let valueLabel: UILabel = {
+        let label = UILabel()
+        label.translatesAutoresizingMaskIntoConstraints = false
+        label.font = .systemFont(ofSize: 15)
+        label.textColor = .secondaryLabel
+        label.textAlignment = .right
+        return label
+    }()
+    
+    private let chevronImageView: UIImageView = {
+        let imageView = UIImageView()
+        imageView.translatesAutoresizingMaskIntoConstraints = false
+        imageView.image = UIImage(systemName: "chevron.right")
+        imageView.tintColor = .grannyPink
+        imageView.contentMode = .scaleAspectFit
+        return imageView
     }()
     
     override init(style: UITableViewCell.CellStyle, reuseIdentifier: String?) {
@@ -27,24 +46,39 @@ class RecipeEditDifficultyCell: UITableViewCell {
     }
     
     private func setupUI() {
-        let label = UILabel()
-        label.translatesAutoresizingMaskIntoConstraints = false
-        label.text = "Difficulty"
-        label.font = .systemFont(ofSize: 17)
+        selectionStyle = .default
         
-        contentView.addSubview(label)
-        contentView.addSubview(segmentedControl)
-        selectionStyle = .none
+        contentView.addSubview(titleLabel)
+        contentView.addSubview(valueLabel)
+        contentView.addSubview(chevronImageView)
         
         NSLayoutConstraint.activate([
-            label.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
-            label.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            titleLabel.leadingAnchor.constraint(equalTo: contentView.leadingAnchor, constant: 16),
+            titleLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
             
-            segmentedControl.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
-            segmentedControl.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
-            segmentedControl.widthAnchor.constraint(equalToConstant: 200),
+            chevronImageView.trailingAnchor.constraint(equalTo: contentView.trailingAnchor, constant: -16),
+            chevronImageView.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            chevronImageView.widthAnchor.constraint(equalToConstant: 10),
+            chevronImageView.heightAnchor.constraint(equalToConstant: 16),
+            
+            valueLabel.trailingAnchor.constraint(equalTo: chevronImageView.leadingAnchor, constant: -8),
+            valueLabel.centerYAnchor.constraint(equalTo: contentView.centerYAnchor),
+            valueLabel.leadingAnchor.constraint(greaterThanOrEqualTo: titleLabel.trailingAnchor, constant: 16),
             
             contentView.heightAnchor.constraint(greaterThanOrEqualToConstant: 44)
         ])
+    }
+    
+    func configure(selectedIndex: Int) {
+        switch selectedIndex {
+        case 0:
+            valueLabel.text = "Easy"
+        case 1:
+            valueLabel.text = "Medium"
+        case 2:
+            valueLabel.text = "Hard"
+        default:
+            valueLabel.text = "Not set"
+        }
     }
 }

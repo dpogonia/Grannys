@@ -310,6 +310,17 @@ class TheMealDBService {
                 .filter { !$0.isEmpty }
         }
         
+        var sources: [String] = []
+        if let youtube = mealDBRecipe.strYoutube?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !youtube.isEmpty {
+            sources.append(youtube)
+        }
+        if let source = mealDBRecipe.strSource?.trimmingCharacters(in: .whitespacesAndNewlines),
+           !source.isEmpty,
+           !sources.contains(source) {
+            sources.append(source)
+        }
+        
         return APIRecipe(
             id: Int(mealDBRecipe.idMeal ?? "0"),
             title: mealDBRecipe.strMeal ?? "Unknown Recipe",
@@ -318,6 +329,7 @@ class TheMealDBService {
             instructions: mealDBRecipe.strInstructions,
             extendedIngredients: ingredients.isEmpty ? nil : ingredients,
             tags: tags.isEmpty ? nil : tags,
+            sources: sources.isEmpty ? nil : sources,
             cookingTime: nil,
             servings: nil,
             difficulty: nil,

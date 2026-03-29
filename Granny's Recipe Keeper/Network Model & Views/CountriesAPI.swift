@@ -13,7 +13,7 @@ import Alamofire
 
 // MARK: - Codable Models
 
-// Реализован парсинг данных с помощью Codable - 20 баллов
+// Реализован парсинг данных с помощью Codable
 // Модель страны из REST Countries API
 public struct Country: Codable {
     public let name: CountryName
@@ -51,9 +51,6 @@ public struct CountryFlags: Codable {
     public let svg: String?
 }
 
-// MARK: - Moya Target
-
-// Определение эндпоинтов REST Countries API через Moya TargetType
 public enum CountriesTarget {
     case allCountries
     case searchByName(String)
@@ -69,7 +66,6 @@ extension CountriesTarget: TargetType {
     }
     
     // Реализовано 3-4 метода
-    // Путь для каждого эндпоинта
     public var path: String {
         switch self {
         case .allCountries:

@@ -1,0 +1,26 @@
+"settings_title" = "Настройки";
+"settings_section_difficulty" = "Сложность";
+"settings_section_tags" = "Теги";
+"settings_section_ingredients" = "Ингредиенты";
+"settings_section_translation" = "Перевод рецептов";
+"settings_section_data" = "Данные";
+"settings_section_app_language" = "Язык приложения";
+
+"settings_difficulty_easy" = "Легко";
+"settings_difficulty_medium" = "Средне";
+"settings_difficulty_hard" = "Сложно";
+
+"common_ok" = "OK";
+
+"export_nothing_title" = "Нет данных для экспорта";
+"export_nothing_message" = "Нет рецептов для экспорта.";
+"export_failed_title" = "Ошибка экспорта";
+
+"import_completed_title" = "Импорт завершён";
+"import_completed_single" = "Импортирован 1 рецепт.";
+"import_completed_many" = "Импортировано %d рецептов.";
+"import_failed_title" = "Ошибка импорта";
+
+"settings_export_json" = "Экспорт рецептов (JSON)";
+"settings_export_csv" = "Экспорт рецептов (CSV)";
+"settings_import" = "Импорт рецептов (JSON / CSV)";

@@ -6,6 +6,7 @@
 //
 
 import UIKit
+import UniformTypeIdentifiers
 
 class FilterViewController: UIViewController {
     
@@ -24,6 +25,8 @@ class FilterViewController: UIViewController {
     private var isTagsExpanded = false
     private var isIngredientsExpanded = false
     private var isTranslationExpanded = false
+    private var isDataExpanded = false
+    private var isAppLanguageExpanded = false
     
     private let tableView: UITableView = {
         let tableView = UITableView(frame: .zero, style: .insetGrouped)
@@ -34,7 +37,11 @@ class FilterViewController: UIViewController {
     private var difficultySegmentedControl: UISegmentedControl?
     
     private func createDifficultyControl() -> UISegmentedControl {
-        let items = ["Easy", "Medium", "Hard"]
+        let items = [
+            tr("settings_difficulty_easy"),
+            tr("settings_difficulty_medium"),
+            tr("settings_difficulty_hard")
+        ]
         let control = UISegmentedControl(items: items)
         control.translatesAutoresizingMaskIntoConstraints = false
         control.addTarget(self, action: #selector(difficultyChanged(_:)), for: .valueChanged)
@@ -93,11 +100,12 @@ class FilterViewController: UIViewController {
         tableView.delegate = self
         tableView.dataSource = self
         tableView.register(UITableViewCell.self, forCellReuseIdentifier: "Cell")
+        tableView.tintColor = .grannyPink
     }
     
     private func setupView() {
         view.backgroundColor = .systemGroupedBackground
-        title = "Filters"
+        title = tr("settings_title")
     }
     
     private func setupNavigationBar() {
@@ -114,8 +122,11 @@ class FilterViewController: UIViewController {
             target: self,
             action: #selector(didTapApplyButton)
         )
+        clearButton.tintColor = .grannyPink
+        applyButton.tintColor = .grannyPink
         
-        navigationItem.rightBarButtonItems = [applyButton, clearButton]
+        // Справа оставляем только кнопку применения настроек
+        navigationItem.rightBarButtonItem = applyButton
         
         let cancelButton = UIBarButtonItem(
             barButtonSystemItem: .cancel,
@@ -205,11 +216,120 @@ class FilterViewController: UIViewController {
         delegate?.didApplyFilters(selectedTags: selectedTags, selectedDifficulty: selectedDifficulty, selectedIngredients: selectedIngredients)
         navigationController?.dismiss(animated: true)
     }
+    
+    private enum DataExportFormat {
+        case json
+        case csv
+    }
+    
+    private func showAlert(title: String, message: String) {
+        let alert = UIAlertController(title: title, message: message, preferredStyle: .alert)
+        alert.addAction(UIAlertAction(title: tr("common_ok"), style: .default))
+        present(alert, animated: true)
+    }
+    
+    private func exportRecipes(as format: DataExportFormat) {
+        let activeRecipes = RecipesRepository.shared.getAllRecipes(archived: false)
+        let archivedRecipes = RecipesRepository.shared.getAllRecipes(archived: true)
+        let allRecipes = activeRecipes + archivedRecipes
+        
+        guard !allRecipes.isEmpty else {
+            showAlert(title: tr("export_nothing_title"), message: tr("export_nothing_message"))
+            return
+        }
+        
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            
+            do {
+                let url: URL
+                switch format {
+                case .json:
+                    url = try RecipeExportImportService.exportRecipesToJSON(allRecipes)
+                case .csv:
+                    url = try RecipeExportImportService.exportRecipesToCSV(allRecipes)
+                }
+                
+                DispatchQueue.main.async {
+                    self.presentShareSheet(for: url)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.showAlert(title: tr("export_failed_title"), message: error.localizedDescription)
+                }
+            }
+        }
+    }
+    
+    private func presentShareSheet(for url: URL) {
+        let activityVC = UIActivityViewController(activityItems: [url], applicationActivities: nil)
+        if let popover = activityVC.popoverPresentationController {
+            popover.sourceView = view
+            popover.sourceRect = CGRect(x: view.bounds.midX, y: view.bounds.midY, width: 0, height: 0)
+        }
+        present(activityVC, animated: true)
+    }
+    
+    private func presentImportPicker() {
+        if #available(iOS 14.0, *) {
+            var types: [UTType] = [UTType.json]
+            types.append(UTType.commaSeparatedText)
+            types.append(UTType.plainText)
+            
+            let picker = UIDocumentPickerViewController(forOpeningContentTypes: types)
+            picker.delegate = self
+            picker.allowsMultipleSelection = false
+            present(picker, animated: true)
+        } else {
+            let types = ["public.json", "public.comma-separated-values-text", "public.text"]
+            let picker = UIDocumentPickerViewController(documentTypes: types, in: .import)
+            picker.delegate = self
+            picker.allowsMultipleSelection = false
+            present(picker, animated: true)
+        }
+    }
+    
+    private func importRecipes(from url: URL) {
+        DispatchQueue.global(qos: .userInitiated).async { [weak self] in
+            guard let self else { return }
+            
+            var importedRecipes: [Recipe] = []
+            
+            do {
+                let ext = url.pathExtension.lowercased()
+                if ext == "json" {
+                    importedRecipes = try RecipeExportImportService.importRecipes(fromJSONAt: url)
+                } else {
+                    importedRecipes = try RecipeExportImportService.importRecipes(fromCSVAt: url)
+                }
+                
+                for recipe in importedRecipes {
+                    RecipesRepository.shared.saveRecipe(recipe)
+                }
+                
+                DispatchQueue.main.async {
+                    let count = importedRecipes.count
+                    let message: String
+                    if count == 1 {
+                        message = tr("import_completed_single")
+                    } else {
+                        message = String(format: tr("import_completed_many"), count)
+                    }
+                    self.showAlert(title: tr("import_completed_title"), message: message)
+                }
+            } catch {
+                DispatchQueue.main.async {
+                    self.showAlert(title: tr("import_failed_title"), message: error.localizedDescription)
+                }
+            }
+        }
+    }
 }
 
 extension FilterViewController: UITableViewDataSource {
     func numberOfSections(in tableView: UITableView) -> Int {
-        return 4
+        // 0: Difficulty, 1: Tags, 2: Ingredients, 3: Translation, 4: Data, 5: App language
+        return 6
     }
     
     func tableView(_ tableView: UITableView, numberOfRowsInSection section: Int) -> Int {
@@ -222,6 +342,11 @@ extension FilterViewController: UITableViewDataSource {
             return isIngredientsExpanded ? allIngredients.count : 0
         case 3:
             return isTranslationExpanded ? availableLanguages.count : 0
+        case 4:
+            return isDataExpanded ? 3 : 0
+        case 5:
+            // Переключатель языка UI: EN / RU
+            return isAppLanguageExpanded ? 2 : 0
         default:
             return 0
         }
@@ -243,17 +368,23 @@ extension FilterViewController: UITableViewDataSource {
         
         switch section {
         case 0:
-            sectionTitle = "Difficulty"
+            sectionTitle = tr("settings_section_difficulty")
             isExpanded = isDifficultyExpanded
         case 1:
-            sectionTitle = "Tags"
+            sectionTitle = tr("settings_section_tags")
             isExpanded = isTagsExpanded
         case 2:
-            sectionTitle = "Ingredients"
+            sectionTitle = tr("settings_section_ingredients")
             isExpanded = isIngredientsExpanded
         case 3:
-            sectionTitle = "Translation"
+            sectionTitle = tr("settings_section_translation")
             isExpanded = isTranslationExpanded
+        case 4:
+            sectionTitle = tr("settings_section_data")
+            isExpanded = isDataExpanded
+        case 5:
+            sectionTitle = tr("settings_section_app_language")
+            isExpanded = isAppLanguageExpanded
         default:
             return nil
         }
@@ -304,6 +435,10 @@ extension FilterViewController: UITableViewDataSource {
             isIngredientsExpanded.toggle()
         case 3:
             isTranslationExpanded.toggle()
+        case 4:
+            isDataExpanded.toggle()
+        case 5:
+            isAppLanguageExpanded.toggle()
         default:
             return
         }
@@ -383,6 +518,46 @@ extension FilterViewController: UITableViewDataSource {
             
             return cell
             
+        case 4:
+            cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+            
+            cell.textLabel?.text = nil
+            cell.detailTextLabel?.text = nil
+            cell.accessoryType = .disclosureIndicator
+            cell.selectionStyle = .default
+            
+            switch indexPath.row {
+            case 0:
+                cell.textLabel?.text = tr("settings_export_json")
+            case 1:
+                cell.textLabel?.text = tr("settings_export_csv")
+            case 2:
+                cell.textLabel?.text = tr("settings_import")
+            default:
+                break
+            }
+            
+            return cell
+            
+        case 5:
+            cell.contentView.subviews.forEach { $0.removeFromSuperview() }
+            
+            cell.textLabel?.text = nil
+            cell.detailTextLabel?.text = nil
+            cell.accessoryType = .none
+            cell.selectionStyle = .default
+            
+            let uiLanguages: [AppLanguage] = [.english, .russian]
+            guard indexPath.row < uiLanguages.count else { return cell }
+            let lang = uiLanguages[indexPath.row]
+            cell.textLabel?.text = lang.displayName
+            cell.textLabel?.font = .systemFont(ofSize: 17)
+            
+            let current = LocalizationManager.shared.currentLanguage
+            cell.accessoryType = (lang == current) ? .checkmark : .none
+            
+            return cell
+            
         default:
             return cell
         }
@@ -391,6 +566,7 @@ extension FilterViewController: UITableViewDataSource {
 
 extension FilterViewController: UITableViewDelegate {
     func tableView(_ tableView: UITableView, didSelectRowAt indexPath: IndexPath) {
+        Haptics.selection()
         tableView.deselectRow(at: indexPath, animated: true)
         
         if indexPath.section == 1 && indexPath.row < allTags.count {
@@ -419,6 +595,26 @@ extension FilterViewController: UITableViewDelegate {
                 indexPaths.append(IndexPath(row: row, section: 3))
             }
             tableView.reloadRows(at: indexPaths, with: .none)
+        } else if indexPath.section == 4 {
+            switch indexPath.row {
+            case 0:
+                exportRecipes(as: .json)
+            case 1:
+                exportRecipes(as: .csv)
+            case 2:
+                presentImportPicker()
+            default:
+                break
+            }
+        } else if indexPath.section == 5 {
+            let uiLanguages: [AppLanguage] = [.english, .russian]
+            guard indexPath.row < uiLanguages.count else { return }
+            
+            LocalizationManager.shared.currentLanguage = uiLanguages[indexPath.row]
+            
+            // Обновляем заголовок и секции, зависящие от языка UI
+            title = tr("settings_title")
+            tableView.reloadData()
         }
     }
     
@@ -429,3 +625,16 @@ extension FilterViewController: UITableViewDelegate {
         return UITableView.automaticDimension
     }
 }
+
+extension FilterViewController: UIDocumentPickerDelegate {
+    func documentPicker(_ controller: UIDocumentPickerViewController, didPickDocumentsAt urls: [URL]) {
+        guard let url = urls.first else { return }
+        
+        let shouldStopAccessing = url.startAccessingSecurityScopedResource()
+        importRecipes(from: url)
+        if shouldStopAccessing {
+            url.stopAccessingSecurityScopedResource()
+        }
+    }
+}
+

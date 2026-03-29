@@ -11,12 +11,17 @@
 		21BFDF1D2F277453003E5BEC /* .gitignore in Resources */ = {isa = PBXBuildFile; fileRef = 21BFDF1C2F277448003E5BEC /* .gitignore */; };
 		21CFD1A72F2A29F6008763D7 /* Moya in Frameworks */ = {isa = PBXBuildFile; productRef = 21CFD1A62F2A29F6008763D7 /* Moya */; };
 		21CFD1AA2F2A2B92008763D7 /* Alamofire in Frameworks */ = {isa = PBXBuildFile; productRef = 21CFD1A92F2A2B92008763D7 /* Alamofire */; };
+		21FE21932F484C8E007658DF /* GoogleService-Info.plist in Resources */ = {isa = PBXBuildFile; fileRef = 21FE21922F484C8E007658DF /* GoogleService-Info.plist */; };
+		21FE21962F484E59007658DF /* FirebaseAnalytics in Frameworks */ = {isa = PBXBuildFile; productRef = 21FE21952F484E59007658DF /* FirebaseAnalytics */; };
+		21FE21982F484E59007658DF /* FirebaseCrashlytics in Frameworks */ = {isa = PBXBuildFile; productRef = 21FE21972F484E59007658DF /* FirebaseCrashlytics */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		2163B11C2F1A5D0A00FB1C1A /* Granny's Recipe Keeper.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "Granny's Recipe Keeper.app"; sourceTree = BUILT_PRODUCTS_DIR; };
+		21A0A0A02C0B0E8A00A0A0A0 /* Secrets.xcconfig */ = {isa = PBXFileReference; lastKnownFileType = text.xcconfig; path = Secrets.xcconfig; sourceTree = "<group>"; };
 		21BFDD912F212F71003E5BEC /* .swiftlint.yml */ = {isa = PBXFileReference; lastKnownFileType = text.yaml; path = .swiftlint.yml; sourceTree = "<group>"; };
 		21BFDF1C2F277448003E5BEC /* .gitignore */ = {isa = PBXFileReference; lastKnownFileType = text; path = .gitignore; sourceTree = "<group>"; };
+		21FE21922F484C8E007658DF /* GoogleService-Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "GoogleService-Info.plist"; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFileSystemSynchronizedBuildFileExceptionSet section */
@@ -48,7 +53,9 @@
 			buildActionMask = 2147483647;
 			files = (
 				21CFD1A72F2A29F6008763D7 /* Moya in Frameworks */,
+				21FE21982F484E59007658DF /* FirebaseCrashlytics in Frameworks */,
 				21CFD1AA2F2A2B92008763D7 /* Alamofire in Frameworks */,
+				21FE21962F484E59007658DF /* FirebaseAnalytics in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -58,6 +65,8 @@
 		2163B1132F1A5D0A00FB1C1A = {
 			isa = PBXGroup;
 			children = (
+				21FE21922F484C8E007658DF /* GoogleService-Info.plist */,
+				21A0A0A02C0B0E8A00A0A0A0 /* Secrets.xcconfig */,
 				21BFDF1C2F277448003E5BEC /* .gitignore */,
 				21BFDD912F212F71003E5BEC /* .swiftlint.yml */,
 				2163B11E2F1A5D0A00FB1C1A /* Granny's Recipe Keeper */,
@@ -91,6 +100,7 @@
 				2163B1182F1A5D0A00FB1C1A /* Sources */,
 				2163B1192F1A5D0A00FB1C1A /* Frameworks */,
 				2163B11A2F1A5D0A00FB1C1A /* Resources */,
+				21FE21992F487B3F007658DF /* ShellScript */,
 			);
 			buildRules = (
 			);
@@ -104,6 +114,8 @@
 			packageProductDependencies = (
 				21CFD1A62F2A29F6008763D7 /* Moya */,
 				21CFD1A92F2A2B92008763D7 /* Alamofire */,
+				21FE21952F484E59007658DF /* FirebaseAnalytics */,
+				21FE21972F484E59007658DF /* FirebaseCrashlytics */,
 			);
 			productName = "Granny's Recipe Keeper";
 			productReference = 2163B11C2F1A5D0A00FB1C1A /* Granny's Recipe Keeper.app */;
@@ -130,6 +142,7 @@
 			knownRegions = (
 				en,
 				Base,
+				ru,
 			);
 			mainGroup = 2163B1132F1A5D0A00FB1C1A;
 			minimizedProjectReferenceProxies = 1;
@@ -137,6 +150,7 @@
 				217F58E52F212BBF009BCF72 /* XCRemoteSwiftPackageReference "SwiftLint" */,
 				21CFD1A52F2A29F6008763D7 /* XCRemoteSwiftPackageReference "Moya" */,
 				21CFD1A82F2A2B92008763D7 /* XCRemoteSwiftPackageReference "Alamofire" */,
+				21FE21942F484E59007658DF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */,
 			);
 			preferredProjectObjectVersion = 77;
 			productRefGroup = 2163B11D2F1A5D0A00FB1C1A /* Products */;
@@ -154,11 +168,39 @@
 			buildActionMask = 2147483647;
 			files = (
 				21BFDF1D2F277453003E5BEC /* .gitignore in Resources */,
+				21FE21932F484C8E007658DF /* GoogleService-Info.plist in Resources */,
 				21BFDD922F212F71003E5BEC /* .swiftlint.yml in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
+
+/* Begin PBXShellScriptBuildPhase section */
+		21FE21992F487B3F007658DF /* ShellScript */ = {
+			isa = PBXShellScriptBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			inputFileListPaths = (
+			);
+			inputPaths = (
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Info.plist",
+				"$(TARGET_BUILD_DIR)/$(UNLOCALIZED_RESOURCES_FOLDER_PATH)/GoogleService-Info.plist",
+				"$(TARGET_BUILD_DIR)/$(EXECUTABLE_PATH)",
+				"${DWARF_DSYM_FOLDER_PATH}/${DWARF_DSYM_FILE_NAME}/Contents/Resources/DWARF/${PRODUCT_NAME}.debug.dylib",
+			);
+			outputFileListPaths = (
+			);
+			outputPaths = (
+				"$(DERIVED_FILE_DIR)/CrashlyticsRunScriptOutput",
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+			shellPath = /bin/sh;
+			shellScript = "# Type a script or drag a script file from your workspace to insert its path.\n\"${BUILD_DIR%/Build/*}/SourcePackages/checkouts/firebase-ios-sdk/Crashlytics/run\"\n\n# Mark script output for dependency analysis\n/bin/mkdir -p \"${DERIVED_FILE_DIR}\"\n/bin/echo \"done\" > \"${DERIVED_FILE_DIR}/CrashlyticsRunScriptOutput\"\n";
+		};
+/* End PBXShellScriptBuildPhase section */
 
 /* Begin PBXSourcesBuildPhase section */
 		2163B1182F1A5D0A00FB1C1A /* Sources */ = {
@@ -180,11 +222,13 @@
 /* Begin XCBuildConfiguration section */
 		2163B1302F1A5D0C00FB1C1A /* Debug */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 21A0A0A02C0B0E8A00A0A0A0 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
 				CODE_SIGN_STYLE = Automatic;
 				CURRENT_PROJECT_VERSION = 1;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
 				DEVELOPMENT_TEAM = 8F44HPWM54;
 				GENERATE_INFOPLIST_FILE = YES;
 				INFOPLIST_FILE = "Granny's Recipe Keeper/Info.plist";
@@ -217,6 +261,7 @@
 		};
 		2163B1312F1A5D0C00FB1C1A /* Release */ = {
 			isa = XCBuildConfiguration;
+			baseConfigurationReference = 21A0A0A02C0B0E8A00A0A0A0 /* Secrets.xcconfig */;
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME = AccentColor;
@@ -421,6 +466,14 @@
 				minimumVersion = 5.11.0;
 			};
 		};
+		21FE21942F484E59007658DF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */ = {
+			isa = XCRemoteSwiftPackageReference;
+			repositoryURL = "https://github.com/firebase/firebase-ios-sdk";
+			requirement = {
+				kind = upToNextMajorVersion;
+				minimumVersion = 12.9.0;
+			};
+		};
 /* End XCRemoteSwiftPackageReference section */
 
 /* Begin XCSwiftPackageProductDependency section */
@@ -438,6 +491,16 @@
 			isa = XCSwiftPackageProductDependency;
 			package = 21CFD1A82F2A2B92008763D7 /* XCRemoteSwiftPackageReference "Alamofire" */;
 			productName = Alamofire;
+		};
+		21FE21952F484E59007658DF /* FirebaseAnalytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21FE21942F484E59007658DF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseAnalytics;
+		};
+		21FE21972F484E59007658DF /* FirebaseCrashlytics */ = {
+			isa = XCSwiftPackageProductDependency;
+			package = 21FE21942F484E59007658DF /* XCRemoteSwiftPackageReference "firebase-ios-sdk" */;
+			productName = FirebaseCrashlytics;
 		};
 /* End XCSwiftPackageProductDependency section */
 	};
