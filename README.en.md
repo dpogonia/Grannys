@@ -61,8 +61,8 @@ The TheMealDB catalog works without a key.
 ## Run
 
 ```bash
-git clone https://github.com/dpogonia/granny-recipe-keeper.git
-cd granny-recipe-keeper
+git clone https://github.com/dpogonia/Grannys.git
+cd Grannys
 ```
 
 ### 1. Unsplash key
