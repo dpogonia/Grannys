@@ -120,3 +120,6 @@ Thumbs.db
 # Local secrets (API keys, etc.)
 Secrets.xcconfig
 
+
+# Firebase client config. Keep a local copy, do not commit it.
+GoogleService-Info.plist
