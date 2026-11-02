@@ -1,4 +1,4 @@
-# Granny's Recipe Keeper
+# Granny's: Recipe Keeper
 
 Личная книга рецептов для iPhone. Рецепты хранятся на устройстве: их можно записать самому, взять из каталога [TheMealDB](https://www.themealdb.com), отметить избранными, убрать в архив и выгрузить в файл.
 
